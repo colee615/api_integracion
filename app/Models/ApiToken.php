@@ -3,10 +3,12 @@
 namespace App\Models;
 
 use Carbon\CarbonInterface;
+use Illuminate\Contracts\Encryption\DecryptException;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 
 class ApiToken extends Model
@@ -28,7 +30,6 @@ class ApiToken extends Model
     protected function casts(): array
     {
         return [
-            'token_secret' => 'encrypted',
             'last_used_at' => 'datetime',
             'starts_at' => 'datetime',
             'expires_at' => 'datetime',
@@ -40,6 +41,26 @@ class ApiToken extends Model
     public function company(): BelongsTo
     {
         return $this->belongsTo(Company::class);
+    }
+
+    public function getTokenSecretAttribute(?string $value): ?string
+    {
+        if ($value === null || $value === '') {
+            return null;
+        }
+
+        try {
+            return Crypt::decryptString($value);
+        } catch (DecryptException) {
+            return $this->looksLikeEncryptedPayload($value) ? null : $value;
+        }
+    }
+
+    public function setTokenSecretAttribute(?string $value): void
+    {
+        $this->attributes['token_secret'] = $value === null || $value === ''
+            ? null
+            : Crypt::encryptString($value);
     }
 
     public function isExpired(): bool
@@ -97,10 +118,28 @@ class ApiToken extends Model
 
     public function maskedToken(): string
     {
-        if (! $this->token_secret) {
+        $tokenSecret = $this->token_secret;
+
+        if (! $tokenSecret) {
             return 'Token no disponible';
         }
 
-        return substr($this->token_secret, 0, 4).str_repeat('*', max(strlen($this->token_secret) - 8, 8)).substr($this->token_secret, -4);
+        return substr($tokenSecret, 0, 4).str_repeat('*', max(strlen($tokenSecret) - 8, 8)).substr($tokenSecret, -4);
+    }
+
+    protected function looksLikeEncryptedPayload(string $value): bool
+    {
+        $decoded = base64_decode($value, true);
+
+        if ($decoded === false) {
+            return false;
+        }
+
+        $payload = json_decode($decoded, true);
+
+        return is_array($payload)
+            && array_key_exists('iv', $payload)
+            && array_key_exists('value', $payload)
+            && array_key_exists('mac', $payload);
     }
 }

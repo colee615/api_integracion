@@ -11,6 +11,7 @@ use App\Models\Package;
 use App\Models\PackageMovement;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
 use Tests\TestCase;
 
 class CompanyPortalApiAuthTest extends TestCase
@@ -75,6 +76,65 @@ class CompanyPortalApiAuthTest extends TestCase
                     'tokens',
                 ],
             ]);
+    }
+
+    public function test_company_dashboard_handles_legacy_plaintext_and_invalid_encrypted_tokens(): void
+    {
+        $company = Company::create([
+            'name' => 'Empresa Tokens Legacy',
+            'slug' => 'empresa-tokens-legacy',
+            'status' => 'active',
+        ]);
+
+        User::create([
+            'name' => 'Empresa Tokens Legacy',
+            'email' => 'empresa-tokens-legacy@test.local',
+            'password' => '123456789',
+            'role' => 'company',
+            'status' => 'active',
+            'company_id' => $company->id,
+        ]);
+
+        DB::table('api_tokens')->insert([
+            [
+                'company_id' => $company->id,
+                'name' => 'Plano heredado',
+                'token_hash' => hash('sha256', 'legacy-plain-token'),
+                'token_secret' => 'legacy-plain-token',
+                'abilities' => json_encode(['packages:read']),
+                'starts_at' => now()->subHour(),
+                'expires_at' => now()->addDay(),
+                'created_at' => now()->subMinute(),
+                'updated_at' => now()->subMinute(),
+            ],
+            [
+                'company_id' => $company->id,
+                'name' => 'Cifrado invalido',
+                'token_hash' => hash('sha256', 'legacy-encrypted-token'),
+                'token_secret' => 'eyJpdiI6ImludmFsaWQiLCJ2YWx1ZSI6ImludmFsaWQiLCJtYWMiOiJpbnZhbGlkIn0=',
+                'abilities' => json_encode(['packages:read']),
+                'starts_at' => now()->subHour(),
+                'expires_at' => now()->addDay(),
+                'created_at' => now(),
+                'updated_at' => now(),
+            ],
+        ]);
+
+        $loginResponse = $this->postJson('/api/v1/company/auth/login', [
+            'email' => 'empresa-tokens-legacy@test.local',
+            'password' => '123456789',
+        ])->assertOk();
+
+        $token = $loginResponse->json('data.token');
+
+        $this->getJson('/api/v1/company/dashboard', [
+            'Authorization' => 'Bearer '.$token,
+            'Accept' => 'application/json',
+        ])->assertOk()
+            ->assertJsonPath('data.tokens.legacy_tokens.0.token_value', null)
+            ->assertJsonPath('data.tokens.legacy_tokens.0.token_masked', 'Token no disponible')
+            ->assertJsonPath('data.tokens.legacy_tokens.1.token_value', 'legacy-plain-token')
+            ->assertJsonPath('data.tokens.legacy_tokens.1.token_masked', 'lega**********oken');
     }
 
     public function test_company_portal_dashboard_only_returns_own_company_data(): void
