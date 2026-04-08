@@ -14,6 +14,7 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->alias([
             'api.token' => \App\Http\Middleware\AuthenticateApiToken::class,
+            'internal.api' => \App\Http\Middleware\AuthenticateInternalApi::class,
             'company.portal' => \App\Http\Middleware\AuthenticateCompanyPortal::class,
             'company.locale' => \App\Http\Middleware\SetCompanyLocale::class,
             'admin' => \App\Http\Middleware\EnsureAdmin::class,

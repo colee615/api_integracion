@@ -96,11 +96,13 @@
                 'total_packages' => $manifest->total_packages,
                 'total_weight_kg' => (float) $manifest->total_weight_kg,
                 'status' => $manifest->status,
+                'delivered_at' => $manifest->meta['delivered_at'] ?? null,
                 'bags' => $manifest->bags->map(function ($bag) {
                     return [
                         'id' => $bag->id,
                         'bag_number' => $bag->bag_number,
                         'status' => $bag->status,
+                        'delivered_at' => $bag->meta['delivered_at'] ?? null,
                         'declared_package_count' => $bag->declared_package_count,
                         'declared_weight_kg' => (float) $bag->declared_weight_kg,
                         'loaded_package_count' => (int) ($bag->meta['loaded_package_count'] ?? 0),
@@ -116,10 +118,12 @@
                                 'destination' => $cn33->destination,
                                 'weight_kg' => (float) $cn33->weight_kg,
                                 'status' => $cn33->status,
+                                'delivered_at' => $cn33->meta['delivered_at'] ?? null,
                                 'package_detail' => $package ? [
                                     'tracking_code' => $package->tracking_code,
                                     'reference' => $package->reference,
                                     'status' => $package->status,
+                                    'delivered_at' => $package->meta['delivered_at'] ?? null,
                                     'sender_name' => $package->sender_name,
                                     'sender_country' => $package->sender_country,
                                     'recipient_name' => $package->recipient_name,
@@ -289,6 +293,9 @@
                                         <td>
                                             <strong>{{ $manifest->cn31_number }}</strong><br>
                                             <small class="text-muted">{{ $manifest->dispatch_date?->format('Y-m-d H:i') }}</small>
+                                            @if(($manifest->meta['delivered_at'] ?? null))
+                                                <br><small class="text-success">Entregado: {{ $manifest->meta['delivered_at'] }}</small>
+                                            @endif
                                         </td>
                                         <td>{{ $manifest->origin_office }} -> {{ $manifest->destination_office }}</td>
                                         <td>{{ $manifest->total_bags }} sacas / {{ $manifest->total_packages }} paquetes</td>
@@ -327,6 +334,9 @@
                                                 <td>
                                                     <strong>{{ $bag->bag_number }}</strong><br>
                                                     <small class="text-muted">{{ $bag->declared_package_count }} paquetes</small>
+                                                    @if(($bag->meta['delivered_at'] ?? null))
+                                                        <br><small class="text-success">Entregado: {{ $bag->meta['delivered_at'] }}</small>
+                                                    @endif
                                                 </td>
                                                 <td>{{ $bag->manifest?->cn31_number ?? 'Sin manifiesto' }}</td>
                                                 <td><span class="detail-chip">{{ $bag->status }}</span></td>
@@ -359,6 +369,9 @@
                                                 <td>
                                                     <strong>{{ $cn33->tracking_code }}</strong><br>
                                                     <small class="text-muted">{{ $cn33->recipient_name }}</small>
+                                                    @if(($cn33->meta['delivered_at'] ?? null))
+                                                        <br><small class="text-success">Entregado: {{ $cn33->meta['delivered_at'] }}</small>
+                                                    @endif
                                                 </td>
                                                 <td>{{ $cn33->bag?->bag_number ?? 'Sin saca' }}</td>
                                                 <td><span class="detail-chip">{{ $cn33->status }}</span></td>
@@ -392,6 +405,9 @@
                                         <td>
                                             <strong>{{ $package->tracking_code }}</strong><br>
                                             <small class="text-muted">{{ $package->reference ?: 'Sin referencia' }}</small>
+                                            @if(($package->meta['delivered_at'] ?? null))
+                                                <br><small class="text-success">Entregado: {{ $package->meta['delivered_at'] }}</small>
+                                            @endif
                                         </td>
                                         <td>{{ $package->recipient_name }}</td>
                                         <td>{{ $package->destination ?: ($package->recipient_city ?: 'Sin destino') }}</td>
@@ -533,6 +549,7 @@
                         <div class="item"><span class="label">Despacho</span><span class="value">${escapeHtml(manifest.dispatch_date)}</span></div>
                         <div class="item"><span class="label">Totales</span><span class="value">${escapeHtml(manifest.total_bags)} sacas / ${escapeHtml(manifest.total_packages)} paquetes</span></div>
                         <div class="item"><span class="label">Peso total</span><span class="value">${escapeHtml(manifest.total_weight_kg)} kg</span></div>
+                        <div class="item"><span class="label">Entregado</span><span class="value">${escapeHtml(manifest.delivered_at)}</span></div>
                     </div>
                 </div>
                 <div class="table-responsive">
@@ -584,6 +601,7 @@
                     <div class="detail-grid">
                         <div class="item"><span class="label">CN31</span><span class="value">${escapeHtml(manifest.cn31_number)}</span></div>
                         <div class="item"><span class="label">Estado saca</span><span class="value">${escapeHtml(bag.status)}</span></div>
+                        <div class="item"><span class="label">Entregado</span><span class="value">${escapeHtml(bag.delivered_at)}</span></div>
                         <div class="item"><span class="label">Paquetes</span><span class="value">${escapeHtml(bag.loaded_package_count)} cargados / ${escapeHtml(bag.declared_package_count)} declarados</span></div>
                         <div class="item"><span class="label">Peso</span><span class="value">${escapeHtml(bag.loaded_weight_kg)} kg / ${escapeHtml(bag.declared_weight_kg)} kg</span></div>
                     </div>
@@ -656,6 +674,7 @@
                     <div class="detail-grid">
                         <div class="item"><span class="label">Tracking</span><span class="value">${escapeHtml(detail.tracking_code)}</span></div>
                         <div class="item"><span class="label">Estado</span><span class="value">${escapeHtml(detail.status)}</span></div>
+                        <div class="item"><span class="label">Entregado</span><span class="value">${escapeHtml(detail.delivered_at)}</span></div>
                         <div class="item"><span class="label">Referencia</span><span class="value">${escapeHtml(detail.reference)}</span></div>
                         <div class="item"><span class="label">Fecha envio</span><span class="value">${escapeHtml(detail.shipment_date)}</span></div>
                         <div class="item"><span class="label">Remitente</span><span class="value">${escapeHtml(detail.sender_name)} (${escapeHtml(detail.sender_country)})</span></div>

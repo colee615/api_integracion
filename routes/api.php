@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Cn31ManifestController;
 use App\Http\Controllers\Api\Cn33BagController;
 use App\Http\Controllers\Api\Auth\MeController;
 use App\Http\Controllers\Api\IntegrationContextController;
+use App\Http\Controllers\Api\InternalPackageDeliveryController;
 use App\Http\Controllers\Api\PackageController;
 use App\Http\Controllers\Api\PackageMovementController;
 use App\Http\Controllers\Api\WebhookEndpointController;
@@ -50,4 +51,10 @@ Route::prefix('v1')
         Route::get('/webhooks', [WebhookEndpointController::class, 'index']);
         Route::post('/webhooks', [WebhookEndpointController::class, 'store']);
         Route::post('/webhooks/{webhookEndpoint}/test', [WebhookEndpointController::class, 'test']);
+    });
+
+Route::prefix('v1/internal')
+    ->middleware('internal.api')
+    ->group(function (): void {
+        Route::post('/packages/deliver', InternalPackageDeliveryController::class);
     });

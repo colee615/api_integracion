@@ -76,22 +76,25 @@
                                             <strong>{{ $token->name }}</strong><br>
                                             <small class="text-muted">Token principal de integracion</small>
                                         </td>
-                                        <td class="token-cell" style="min-width: 290px;">
-                                            <div class="input-group input-group-sm">
-                                                <input type="password"
-                                                       class="form-control js-token-secret"
-                                                       value="{{ $token->token_secret }}"
-                                                       data-masked="{{ $token->maskedToken() }}"
-                                                       readonly>
-                                                <div class="input-group-append">
-                                                    <button type="button" class="btn btn-outline-secondary js-toggle-token" title="Ver token">
-                                                        <i class="fas fa-eye"></i>
-                                                    </button>
-                                                    <button type="button" class="btn btn-outline-primary js-copy-token" title="Copiar token">
-                                                        <i class="fas fa-copy"></i>
-                                                    </button>
+                                        <td class="token-cell" style="min-width: 320px;">
+                                            @if ($token->token_secret)
+                                                <div class="input-group input-group-sm">
+                                                    <textarea class="form-control js-token-secret"
+                                                              rows="3"
+                                                              readonly>{{ $token->token_secret }}</textarea>
+                                                    <div class="input-group-append">
+                                                        <button type="button" class="btn btn-outline-primary js-copy-token" title="Copiar token">
+                                                            <i class="fas fa-copy"></i>
+                                                        </button>
+                                                    </div>
                                                 </div>
-                                            </div>
+                                                <small class="text-muted d-block mt-2">Usa este valor completo en <code>Authorization: Bearer {token}</code>.</small>
+                                            @else
+                                                <div class="alert alert-warning mb-0 py-2 px-3">
+                                                    Este token ya no es legible desde la aplicacion.
+                                                </div>
+                                                <small class="text-muted d-block mt-2">Genera uno nuevo o elimina este registro para evitar confusiones.</small>
+                                            @endif
                                         </td>
                                         <td>
                                             <div><strong>Desde:</strong> {{ $token->starts_at?->format('Y-m-d H:i') ?? 'Inmediato' }}</div>
@@ -162,27 +165,10 @@
 @section('js')
 <script>
 document.addEventListener('DOMContentLoaded', function () {
-    document.querySelectorAll('.js-token-secret').forEach(function (input) {
-        input.dataset.realValue = input.value;
-        input.value = input.dataset.masked;
-    });
-
-    document.querySelectorAll('.js-toggle-token').forEach(function (button) {
-        button.addEventListener('click', function () {
-            const input = button.closest('.input-group').querySelector('.js-token-secret');
-            const icon = button.querySelector('i');
-            const isHidden = input.type === 'password';
-
-            input.type = isHidden ? 'text' : 'password';
-            input.value = isHidden ? input.dataset.realValue : input.dataset.masked;
-            icon.className = isHidden ? 'fas fa-eye-slash' : 'fas fa-eye';
-        });
-    });
-
     document.querySelectorAll('.js-copy-token').forEach(function (button) {
         button.addEventListener('click', async function () {
             const input = button.closest('.input-group').querySelector('.js-token-secret');
-            await navigator.clipboard.writeText(input.dataset.realValue);
+            await navigator.clipboard.writeText(input.value);
         });
     });
 });

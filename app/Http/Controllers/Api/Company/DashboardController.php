@@ -159,6 +159,7 @@ class DashboardController extends Controller
                         'total_packages' => $manifest->total_packages,
                         'total_weight_kg' => (float) $manifest->total_weight_kg,
                         'status' => $manifest->status,
+                        'delivered_at' => $manifest->meta['delivered_at'] ?? null,
                     ])
                     ->values(),
                 'recent_bags' => Cn31Bag::query()
@@ -178,6 +179,7 @@ class DashboardController extends Controller
                         'documented_packages' => Cn33Package::where('cn31_bag_id', $bag->id)->where('status', 'documentado_cn22')->count(),
                         'status' => $bag->status,
                         'received_at' => $bag->received_at?->toIso8601String(),
+                        'delivered_at' => $bag->meta['delivered_at'] ?? null,
                     ])
                     ->values(),
                 'recent_movements' => PackageMovement::query()
@@ -212,6 +214,7 @@ class DashboardController extends Controller
                         'api_result' => $package->meta['api_result'] ?? [],
                         'registered_at' => $package->registered_at?->toIso8601String(),
                         'last_movement_at' => $package->last_movement_at?->toIso8601String(),
+                        'delivered_at' => $package->meta['delivered_at'] ?? null,
                     ])
                     ->values(),
                 'recent_bulk_integrations' => Cn31Manifest::query()
@@ -233,10 +236,12 @@ class DashboardController extends Controller
                         'total_packages' => $manifest->total_packages,
                         'total_weight_kg' => (float) $manifest->total_weight_kg,
                         'status' => $manifest->status,
+                        'delivered_at' => $manifest->meta['delivered_at'] ?? null,
                         'bags' => $manifest->bags->map(fn ($bag) => [
                             'id' => $bag->id,
                             'bag_number' => $bag->bag_number,
                             'status' => $bag->status,
+                            'delivered_at' => $bag->meta['delivered_at'] ?? null,
                             'declared_package_count' => (int) $bag->declared_package_count,
                             'declared_weight_kg' => (float) $bag->declared_weight_kg,
                             'loaded_package_count' => (int) ($bag->meta['loaded_package_count'] ?? $bag->cn33Packages->count()),
@@ -254,6 +259,7 @@ class DashboardController extends Controller
                                 'destination' => $cn33Package->destination,
                                 'weight_kg' => (float) $cn33Package->weight_kg,
                                 'status' => $cn33Package->status,
+                                'delivered_at' => $cn33Package->meta['delivered_at'] ?? null,
                                 'notes' => $cn33Package->meta['notes'] ?? null,
                                 'cn22_received_at' => $cn33Package->meta['cn22_received_at'] ?? null,
                                 'package' => $cn33Package->package ? [
@@ -289,6 +295,7 @@ class DashboardController extends Controller
                                     'customs_items' => $cn33Package->package->customs_items ?? [],
                                     'registered_at' => $cn33Package->package->registered_at?->toIso8601String(),
                                     'last_movement_at' => $cn33Package->package->last_movement_at?->toIso8601String(),
+                                    'delivered_at' => $cn33Package->package->meta['delivered_at'] ?? null,
                                     'movements' => $cn33Package->package->movements->map(fn ($movement) => [
                                         'id' => $movement->id,
                                         'status' => $movement->status,
