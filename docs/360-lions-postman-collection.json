@@ -1,0 +1,499 @@
+{
+  "info": {
+    "_postman_id": "2ad7d91a-c7d8-4e66-9f76-360lions-api-integracion",
+    "name": "360 Lions - Flujo Completo API Integracion",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+    "description": "Coleccion para probar el flujo completo de 360 Lions usando un unico token manual: validacion, CN31, CN33, CN22, consultas, portal y webhooks."
+  },
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://127.0.0.1:8000/api/v1"
+    },
+    {
+      "key": "api_token",
+      "value": "jcK0V3WVYClt4Lzixh5bf1pYa8d8ekPDEv6vQY9A7y2PIZwANobPO7Gya5GwvDYo"
+    },
+    {
+      "key": "portal_email",
+      "value": "pruebalions@gmail.com"
+    },
+    {
+      "key": "portal_password",
+      "value": "123456789"
+    },
+    {
+      "key": "portal_token",
+      "value": ""
+    },
+    {
+      "key": "cn31_number",
+      "value": "CN31-360LIONS-0001"
+    },
+    {
+      "key": "bag_number",
+      "value": "SACA-360-001"
+    },
+    {
+      "key": "tracking_code",
+      "value": "EN000000701BO"
+    },
+    {
+      "key": "webhook_url",
+      "value": "https://example.com/webhooks/agbc"
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Validar Token API",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/me",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "me"
+          ]
+        }
+      }
+    },
+    {
+      "name": "2. Validar Identidad",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/me",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "me"
+          ]
+        }
+      }
+    },
+    {
+      "name": "3. Contexto de Integracion",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/integration/context",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "integration",
+            "context"
+          ]
+        }
+      }
+    },
+    {
+      "name": "4. Registrar CN31",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"cn31_number\": \"{{cn31_number}}\",\n  \"origin_office\": \"COCHABAMBA\",\n  \"destination_office\": \"LA PAZ\",\n  \"dispatch_date\": \"2026-04-08 10:00:00\",\n  \"bags\": [\n    {\n      \"bag_number\": \"{{bag_number}}\",\n      \"package_count\": 1,\n      \"total_weight_kg\": 0.250,\n      \"seal_number\": \"PRECINTO-360-01\",\n      \"dispatch_note\": \"Carga 360 Lions\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/cn31/manifests",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "cn31",
+            "manifests"
+          ]
+        }
+      }
+    },
+    {
+      "name": "5. Registrar CN33",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"packages\": [\n    {\n      \"tracking_code\": \"{{tracking_code}}\",\n      \"reference\": \"INT-360-001\",\n      \"recipient_name\": \"Marco Antonio Espinoza Rojas\",\n      \"destination\": \"LA PAZ\",\n      \"weight_kg\": 0.250,\n      \"notes\": \"Paquete 360 Lions\"\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/cn33/bags/{{bag_number}}/packages",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "cn33",
+            "bags",
+            "{{bag_number}}",
+            "packages"
+          ]
+        }
+      }
+    },
+    {
+      "name": "6. Registrar CN22",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"records\": [\n    {\n      \"tracking_code\": \"{{tracking_code}}\",\n      \"reference\": \"INT-360-001\",\n      \"origin_office\": \"COCHABAMBA\",\n      \"destination_office\": \"LA PAZ\",\n      \"sender_name\": \"360 Lions\",\n      \"sender_country\": \"BOLIVIA\",\n      \"sender_address\": \"Av. Integracion 123\",\n      \"sender_phone\": \"70000000\",\n      \"recipient_name\": \"Marco Antonio Espinoza Rojas\",\n      \"recipient_document\": \"1234567\",\n      \"recipient_address\": \"Av Mario Mercado 220\",\n      \"recipient_address_reference\": \"Puerta azul frente a farmacia\",\n      \"recipient_city\": \"LA PAZ\",\n      \"recipient_department\": \"LA PAZ\",\n      \"recipient_phone\": \"76785423\",\n      \"recipient_whatsapp\": \"76785423\",\n      \"destination\": \"LA PAZ\",\n      \"description\": \"Documentos personales\",\n      \"shipment_date\": \"2026-04-08 10:05:00\",\n      \"gross_weight_grams\": 250,\n      \"weight_kg\": 0.250,\n      \"length_cm\": 20,\n      \"width_cm\": 15,\n      \"height_cm\": 2,\n      \"value_fob_usd\": 17.00,\n      \"customs_items\": [\n        {\n          \"description\": \"Documentos\",\n          \"quantity\": 1,\n          \"value\": 17.00,\n          \"weight_kg\": 0.250,\n          \"hs_code\": \"490110\",\n          \"origin_country\": \"BO\"\n        }\n      ]\n    }\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/cn22/shipments",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "cn22",
+            "shipments"
+          ]
+        }
+      }
+    },
+    {
+      "name": "7. Ver CN31",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/cn31/manifests/{{cn31_number}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "cn31",
+            "manifests",
+            "{{cn31_number}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "8. Ver Saca CN33",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/cn33/bags/{{bag_number}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "cn33",
+            "bags",
+            "{{bag_number}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "9. Ver Paquete",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/packages/{{tracking_code}}",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "packages",
+            "{{tracking_code}}"
+          ]
+        }
+      }
+    },
+    {
+      "name": "10. Registrar Movimiento",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"status\": \"en_proceso_aduana\",\n  \"location\": \"Aeropuerto El Alto\",\n  \"description\": \"Ingreso a canal aduanero\",\n  \"occurred_at\": \"2026-04-08 10:30:00\",\n  \"meta\": {\n    \"source\": \"hub-central\"\n  }\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/packages/{{tracking_code}}/movements",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "packages",
+            "{{tracking_code}}",
+            "movements"
+          ]
+        }
+      }
+    },
+    {
+      "name": "11. Listar Movimientos",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/packages/{{tracking_code}}/movements",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "packages",
+            "{{tracking_code}}",
+            "movements"
+          ]
+        }
+      }
+    },
+    {
+      "name": "12. Registrar Webhook",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"name\": \"360Lion Produccion\",\n  \"target_url\": \"{{webhook_url}}\",\n  \"events\": [\n    \"shipment.received_sorting_center\",\n    \"shipment.customs_in_progress\",\n    \"shipment.customs_released\",\n    \"shipment.out_for_delivery\",\n    \"shipment.delivered\",\n    \"shipment.delivery_incident\"\n  ]\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/webhooks",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "webhooks"
+          ]
+        }
+      }
+    },
+    {
+      "name": "13. Portal Login",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{portal_email}}\",\n  \"password\": \"{{portal_password}}\"\n}"
+        },
+        "url": {
+          "raw": "{{base_url}}/company/auth/login",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "company",
+            "auth",
+            "login"
+          ]
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "exec": [
+              "const json = pm.response.json();",
+              "pm.collectionVariables.set('portal_token', json.data?.token || '');"
+            ],
+            "type": "text/javascript"
+          }
+        }
+      ]
+    },
+    {
+      "name": "14. Portal Perfil",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{portal_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/company/auth/me",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "company",
+            "auth",
+            "me"
+          ]
+        }
+      }
+    },
+    {
+      "name": "15. Portal Dashboard",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{portal_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/company/dashboard",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "company",
+            "dashboard"
+          ]
+        }
+      }
+    }
+  ]
+}
