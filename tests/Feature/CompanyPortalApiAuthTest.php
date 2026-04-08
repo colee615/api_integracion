@@ -17,6 +17,17 @@ class CompanyPortalApiAuthTest extends TestCase
 {
     use RefreshDatabase;
 
+    public function test_company_portal_login_endpoint_allows_cors_preflight_from_any_origin(): void
+    {
+        $this->call('OPTIONS', '/api/v1/company/auth/login', [], [], [], [
+            'HTTP_ORIGIN' => 'http://172.65.10.51:8201',
+            'HTTP_ACCESS_CONTROL_REQUEST_METHOD' => 'POST',
+            'HTTP_ACCESS_CONTROL_REQUEST_HEADERS' => 'content-type, authorization',
+        ])->assertNoContent()
+            ->assertHeader('Access-Control-Allow-Origin', '*')
+            ->assertHeader('Access-Control-Allow-Methods');
+    }
+
     public function test_company_can_log_in_via_portal_api_and_fetch_dashboard(): void
     {
         $company = Company::create([
