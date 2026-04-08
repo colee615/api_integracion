@@ -56,7 +56,15 @@ class CompanyController extends Controller
             'cn33_packages' => Cn33Package::where('company_id', $company->id)->count(),
             'packages' => Package::where('company_id', $company->id)->count(),
             'movements' => PackageMovement::where('company_id', $company->id)->count(),
+            'delivered_packages' => Package::where('company_id', $company->id)->where('status', 'entregado')->count(),
+            'delivered_bags' => Cn31Bag::where('company_id', $company->id)->where('status', 'entregado')->count(),
+            'delivered_manifests' => Cn31Manifest::where('company_id', $company->id)->where('status', 'entregado')->count(),
         ];
+
+        $summary['pending_delivery_packages'] = max($summary['packages'] - $summary['delivered_packages'], 0);
+        $summary['delivery_progress_pct'] = $summary['packages'] > 0
+            ? round(($summary['delivered_packages'] / $summary['packages']) * 100, 1)
+            : 0.0;
 
         $recentManifests = Cn31Manifest::query()
             ->with([
@@ -70,7 +78,10 @@ class CompanyController extends Controller
             ->get();
 
         $recentBags = Cn31Bag::query()
-            ->with('manifest:id,cn31_number')
+            ->with([
+                'manifest:id,cn31_number',
+                'cn33Packages:id,cn31_bag_id,status',
+            ])
             ->where('company_id', $company->id)
             ->latest()
             ->limit(10)

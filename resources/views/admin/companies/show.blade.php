@@ -70,6 +70,188 @@
         .modal-table th {
             vertical-align: middle;
         }
+
+        .progress-panel {
+            border: 1px solid #d9e6f2;
+            border-radius: 1rem;
+            background: linear-gradient(135deg, #eef7ff 0%, #ffffff 100%);
+            padding: 1rem 1.1rem;
+            margin-bottom: 1rem;
+        }
+
+        .progress-panel .headline {
+            display: flex;
+            align-items: flex-end;
+            justify-content: space-between;
+            gap: 1rem;
+            margin-bottom: .6rem;
+            flex-wrap: wrap;
+        }
+
+        .progress-panel .headline .title {
+            font-size: .8rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #52708f;
+            font-weight: 700;
+        }
+
+        .progress-panel .headline .value {
+            color: #0f172a;
+            font-size: 1.9rem;
+            font-weight: 800;
+        }
+
+        .progress-panel .headline .subtitle {
+            width: 100%;
+            color: #5f7895;
+            font-size: .95rem;
+            margin-top: -.25rem;
+        }
+
+        .progress-bar-shell {
+            height: .95rem;
+            background: #dbeafe;
+            border-radius: 999px;
+            overflow: hidden;
+            margin-bottom: 1rem;
+        }
+
+        .progress-bar-fill {
+            height: 100%;
+            background: linear-gradient(90deg, #0f766e 0%, #22c55e 100%);
+            border-radius: 999px;
+        }
+
+        .package-metrics {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: .8rem;
+            margin-bottom: .85rem;
+        }
+
+        .package-metric {
+            border: 1px solid #d9e6f2;
+            border-radius: .9rem;
+            background: #fff;
+            padding: .9rem 1rem;
+        }
+
+        .package-metric .label {
+            display: block;
+            font-size: .74rem;
+            text-transform: uppercase;
+            letter-spacing: .08em;
+            color: #6b7f95;
+            margin-bottom: .35rem;
+        }
+
+        .package-metric .value {
+            display: block;
+            font-size: 1.35rem;
+            font-weight: 800;
+            color: #0f172a;
+            line-height: 1.1;
+        }
+
+        .package-metric .hint {
+            display: block;
+            margin-top: .25rem;
+            color: #64748b;
+            font-size: .82rem;
+        }
+
+        .package-metric.is-delivered {
+            background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
+            border-color: #bbf7d0;
+        }
+
+        .package-metric.is-pending {
+            background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
+            border-color: #fed7aa;
+        }
+
+        .progress-footnote {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            flex-wrap: wrap;
+            color: #64748b;
+            font-size: .9rem;
+        }
+
+        .bag-progress-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: .9rem;
+            margin-top: 1rem;
+        }
+
+        .bag-progress-card {
+            border: 1px solid #d9e6f2;
+            border-radius: 1rem;
+            background: #fff;
+            padding: 1rem;
+        }
+
+        .bag-progress-card .topline {
+            display: flex;
+            justify-content: space-between;
+            gap: 1rem;
+            align-items: flex-start;
+            margin-bottom: .55rem;
+        }
+
+        .bag-progress-card .bag-name {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0f172a;
+        }
+
+        .bag-progress-card .bag-meta {
+            color: #64748b;
+            font-size: .82rem;
+            margin-top: .15rem;
+        }
+
+        .bag-progress-card .bag-ratio {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #0f172a;
+            white-space: nowrap;
+        }
+
+        .bag-progress-card .bag-message {
+            color: #334155;
+            font-size: .93rem;
+            margin-bottom: .55rem;
+        }
+
+        .bag-progress-card .bag-footer {
+            display: flex;
+            justify-content: space-between;
+            gap: .8rem;
+            flex-wrap: wrap;
+            color: #64748b;
+            font-size: .82rem;
+            margin-top: .55rem;
+        }
+
+        @media (max-width: 992px) {
+            .package-metrics {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
+            }
+
+            .bag-progress-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        @media (max-width: 576px) {
+            .package-metrics {
+                grid-template-columns: 1fr;
+            }
+        }
     </style>
 @stop
 
@@ -160,6 +342,34 @@
                 })->values(),
             ];
         })->values();
+
+        $bagDeliveryProgress = $recentBags->map(function ($bag) {
+            $declared = (int) $bag->declared_package_count;
+            $delivered = $bag->cn33Packages->where('status', 'entregado')->count();
+            $pending = max($declared - $delivered, 0);
+            $pct = $declared > 0 ? round(($delivered / $declared) * 100, 1) : 0.0;
+
+            if ($declared === 0) {
+                $message = 'Esta saca no tiene paquetes declarados.';
+            } elseif ($delivered === 0) {
+                $message = "No se entrego ningun paquete de esta saca. Faltan {$pending}.";
+            } elseif ($pending === 0) {
+                $message = "Todos los {$declared} paquetes de esta saca fueron entregados.";
+            } else {
+                $message = "Se entregaron {$delivered} de {$declared} paquetes. Faltan {$pending}.";
+            }
+
+            return [
+                'bag_number' => $bag->bag_number,
+                'manifest_number' => $bag->manifest?->cn31_number,
+                'status' => $bag->status,
+                'declared' => $declared,
+                'delivered' => $delivered,
+                'pending' => $pending,
+                'pct' => $pct,
+                'message' => $message,
+            ];
+        });
     @endphp
 
     <div class="page-shell">
@@ -194,6 +404,66 @@
                     <x-adminlte-small-box title="{{ $summary['movements'] }}" text="Movimientos" icon="fas fa-route" theme="white"/>
                 </div>
             </div>
+        </div>
+
+        <div class="progress-panel">
+            <div class="headline">
+                <span class="title">Avance de entrega</span>
+                <span class="value">{{ $summary['delivered_packages'] }} / {{ $summary['packages'] }} paquetes</span>
+                <span class="subtitle">Seguimiento detallado de paquetes entregados frente al total recibido desde la empresa.</span>
+            </div>
+            <div class="progress-bar-shell">
+                <div class="progress-bar-fill" style="width: {{ $summary['delivery_progress_pct'] }}%;"></div>
+            </div>
+            <div class="package-metrics">
+                <div class="package-metric">
+                    <span class="label">Total recibido</span>
+                    <span class="value">{{ $summary['packages'] }}</span>
+                    <span class="hint">Paquetes cargados por la empresa</span>
+                </div>
+                <div class="package-metric is-delivered">
+                    <span class="label">Entregados</span>
+                    <span class="value">{{ $summary['delivered_packages'] }}</span>
+                    <span class="hint">{{ $summary['delivery_progress_pct'] }}% del total</span>
+                </div>
+                <div class="package-metric is-pending">
+                    <span class="label">Pendientes</span>
+                    <span class="value">{{ $summary['pending_delivery_packages'] }}</span>
+                    <span class="hint">Aun no marcados como entregados</span>
+                </div>
+                <div class="package-metric">
+                    <span class="label">Relacion actual</span>
+                    <span class="value">{{ $summary['delivered_packages'] }} : {{ $summary['pending_delivery_packages'] }}</span>
+                    <span class="hint">Entregados vs pendientes</span>
+                </div>
+            </div>
+            <div class="progress-footnote">
+                <span>{{ $summary['delivered_bags'] }} / {{ $summary['bags'] }} sacas completadas</span>
+                <span>{{ $summary['delivered_manifests'] }} / {{ $summary['manifests'] }} manifiestos completados</span>
+            </div>
+            @if($bagDeliveryProgress->isNotEmpty())
+                <div class="bag-progress-grid">
+                    @foreach($bagDeliveryProgress as $bagProgress)
+                        <div class="bag-progress-card">
+                            <div class="topline">
+                                <div>
+                                    <div class="bag-name">{{ $bagProgress['bag_number'] }}</div>
+                                    <div class="bag-meta">{{ $bagProgress['manifest_number'] ?? 'Sin CN31' }} | Estado: {{ $bagProgress['status'] }}</div>
+                                </div>
+                                <div class="bag-ratio">{{ $bagProgress['delivered'] }} / {{ $bagProgress['declared'] }}</div>
+                            </div>
+                            <div class="bag-message">{{ $bagProgress['message'] }}</div>
+                            <div class="progress-bar-shell" style="margin-bottom: .55rem;">
+                                <div class="progress-bar-fill" style="width: {{ $bagProgress['pct'] }}%;"></div>
+                            </div>
+                            <div class="bag-footer">
+                                <span>{{ $bagProgress['pct'] }}% entregado</span>
+                                <span>{{ $bagProgress['pending'] }} pendientes</span>
+                            </div>
+                        </div>
+                    @endforeach
+                </div>
+            @endif
         </div>
 
         <div class="row">

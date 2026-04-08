@@ -25,6 +25,15 @@ class DashboardController extends Controller
         $manifestsCount = Cn31Manifest::where('company_id', $company->id)->count();
         $bagsCount = Cn31Bag::where('company_id', $company->id)->count();
         $cn33PackagesCount = Cn33Package::where('company_id', $company->id)->count();
+        $deliveredPackagesCount = Package::where('company_id', $company->id)
+            ->where('status', 'entregado')
+            ->count();
+        $deliveredBagsCount = Cn31Bag::where('company_id', $company->id)
+            ->where('status', 'entregado')
+            ->count();
+        $deliveredManifestsCount = Cn31Manifest::where('company_id', $company->id)
+            ->where('status', 'entregado')
+            ->count();
 
         $legacyTokens = ApiToken::query()
             ->where('company_id', $company->id)
@@ -50,6 +59,9 @@ class DashboardController extends Controller
         $loadedWeightKg = round((float) Cn31Bag::query()->where('company_id', $company->id)->get()->sum(fn ($bag) => (float) ($bag->meta['loaded_weight_kg'] ?? 0)), 3);
         $documentationCoverage = $cn33PackagesCount > 0
             ? round(($documentedPackagesCount / $cn33PackagesCount) * 100, 1)
+            : 0.0;
+        $deliveryProgress = $packagesCount > 0
+            ? round(($deliveredPackagesCount / $packagesCount) * 100, 1)
             : 0.0;
         $bagReconciliationRate = $bagsCount > 0
             ? round(($reconciledBagsCount / $bagsCount) * 100, 1)
@@ -118,6 +130,12 @@ class DashboardController extends Controller
                     'manifests' => $manifestsCount,
                     'bags' => $bagsCount,
                     'cn33_packages' => $cn33PackagesCount,
+                    'delivered_packages' => $deliveredPackagesCount,
+                    'pending_delivery_packages' => max($packagesCount - $deliveredPackagesCount, 0),
+                    'delivered_bags' => $deliveredBagsCount,
+                    'pending_delivery_bags' => max($bagsCount - $deliveredBagsCount, 0),
+                    'delivered_manifests' => $deliveredManifestsCount,
+                    'pending_delivery_manifests' => max($manifestsCount - $deliveredManifestsCount, 0),
                     'documented_packages' => $documentedPackagesCount,
                     'pending_cn22_packages' => $pendingCn22Count,
                     'observed_bags' => $observedBagsCount,
@@ -128,9 +146,20 @@ class DashboardController extends Controller
                 ],
                 'analytics' => [
                     'documentation_coverage_pct' => $documentationCoverage,
+                    'delivery_progress_pct' => $deliveryProgress,
                     'bag_reconciliation_pct' => $bagReconciliationRate,
                     'manifest_reception_pct' => $manifestReceptionRate,
+                    'delivery_overview' => [
+                        'delivered_packages' => $deliveredPackagesCount,
+                        'total_packages' => $packagesCount,
+                        'pending_delivery_packages' => max($packagesCount - $deliveredPackagesCount, 0),
+                        'delivered_bags' => $deliveredBagsCount,
+                        'total_bags' => $bagsCount,
+                        'delivered_manifests' => $deliveredManifestsCount,
+                        'total_manifests' => $manifestsCount,
+                    ],
                     'status_breakdown' => [
+                        'delivered_packages' => $deliveredPackagesCount,
                         'observed_bags' => $observedBagsCount,
                         'reconciled_bags' => $reconciledBagsCount,
                         'pending_cn33_bags' => $pendingCn33BagsCount,
