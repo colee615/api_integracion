@@ -14,15 +14,6 @@ class InternalPackageDeliveryTest extends TestCase
 {
     use RefreshDatabase;
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-
-        config([
-            'services.internal_api.token' => 'internal-test-token',
-        ]);
-    }
-
     public function test_internal_delivery_api_marks_package_bag_and_manifest_as_delivered_when_all_bag_packages_are_delivered(): void
     {
         $company = Company::create([
@@ -107,7 +98,6 @@ class InternalPackageDeliveryTest extends TestCase
             'location' => 'LA PAZ',
             'description' => 'Entrega final confirmada por operaciones.',
         ], [
-            'X-Internal-Token' => 'internal-test-token',
             'Accept' => 'application/json',
         ])->assertOk()
             ->assertJsonPath('data.tracking_code', 'EN000000901BO')
@@ -145,11 +135,11 @@ class InternalPackageDeliveryTest extends TestCase
         );
     }
 
-    public function test_internal_delivery_api_rejects_requests_without_internal_token(): void
+    public function test_internal_delivery_api_requires_tracking_code_in_request_body(): void
     {
         $this->postJson('/api/v1/internal/packages/deliver', [], [
             'Accept' => 'application/json',
-        ])->assertUnauthorized()
-            ->assertJsonPath('message', 'Invalid internal API token.');
+        ])->assertStatus(422)
+            ->assertJsonValidationErrors(['tracking_code']);
     }
 }

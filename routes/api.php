@@ -54,7 +54,6 @@ Route::prefix('v1')
     });
 
 Route::prefix('v1/internal')
-    ->middleware('internal.api')
     ->group(function (): void {
         Route::post('/packages/deliver', InternalPackageDeliveryController::class);
     });
