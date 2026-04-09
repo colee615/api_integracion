@@ -44,7 +44,7 @@ class InternalPackageDeliveryAttemptController extends Controller
 
             $movement = $package->movements()->create([
                 'company_id' => $package->company_id,
-                'status' => 'incidencia_entrega',
+                'status' => 'intentos_carteros',
                 'location' => $validated['location'] ?? null,
                 'description' => $description,
                 'occurred_at' => $occurredAt,
@@ -64,7 +64,7 @@ class InternalPackageDeliveryAttemptController extends Controller
             ]);
 
             $package->forceFill([
-                'status' => $package->status === 'entregado' ? 'entregado' : 'incidencia_entrega',
+                'status' => $package->status === 'entregado' ? 'entregado' : 'intentos_carteros',
                 'delivery_attempts' => $attemptNumber,
                 'last_delivery_attempt_at' => $occurredAt,
                 'last_movement_at' => $occurredAt,
@@ -73,7 +73,7 @@ class InternalPackageDeliveryAttemptController extends Controller
 
             if ($package->cn33Package && $package->cn33Package->status !== 'entregado') {
                 $package->cn33Package->forceFill([
-                    'status' => 'incidencia_entrega',
+                    'status' => 'intentos_carteros',
                     'meta' => array_merge($package->cn33Package->meta ?? [], [
                         'delivery_attempts' => $attemptNumber,
                         'last_delivery_attempt_at' => $occurredAt->toIso8601String(),
@@ -82,7 +82,7 @@ class InternalPackageDeliveryAttemptController extends Controller
             }
         });
 
-        $notifier->dispatchForPackage($package->fresh('company'), 'incidencia_entrega', [
+        $notifier->dispatchForPackage($package->fresh('company'), 'intentos_carteros', [
             'location' => $movement->location,
             'description' => $movement->description,
             'movement_id' => $movement->id,

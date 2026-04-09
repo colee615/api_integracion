@@ -17,6 +17,7 @@ class PackageStatusCatalog
             'en_ruta_entrega',
             'en_transito',
             'entregado',
+            'intentos_carteros',
             'incidencia_entrega',
         ];
     }
@@ -29,6 +30,7 @@ class PackageStatusCatalog
             'shipment.customs_released',
             'shipment.out_for_delivery',
             'shipment.delivered',
+            'shipment.delivery_attempts',
             'shipment.delivery_incident',
         ];
     }
@@ -38,6 +40,7 @@ class PackageStatusCatalog
         return match ($status) {
             'clasificado' => 'recibido_centro_clasificacion',
             'en_transito' => 'en_ruta_entrega',
+            'incidencia_entrega' => 'intentos_carteros',
             default => $status,
         };
     }
@@ -50,7 +53,7 @@ class PackageStatusCatalog
             'liberado_aduana' => 'shipment.customs_released',
             'en_ruta_entrega' => 'shipment.out_for_delivery',
             'entregado' => 'shipment.delivered',
-            'incidencia_entrega' => 'shipment.delivery_incident',
+            'intentos_carteros' => 'shipment.delivery_attempts',
             default => null,
         };
     }

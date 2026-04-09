@@ -216,20 +216,20 @@ class InternalPackageDeliveryTest extends TestCase
         ])->assertOk()
             ->assertJsonPath('data.tracking_code', 'EN000000903BO')
             ->assertJsonPath('data.delivery_attempts', 1)
-            ->assertJsonPath('data.status', 'incidencia_entrega')
+            ->assertJsonPath('data.status', 'intentos_carteros')
             ->assertJsonPath('data.last_delivery_attempt.location', 'LA PAZ');
 
         $this->assertDatabaseHas('packages', [
             'company_id' => $company->id,
             'tracking_code' => 'EN000000903BO',
-            'status' => 'incidencia_entrega',
+            'status' => 'intentos_carteros',
             'delivery_attempts' => 1,
         ]);
 
         $this->assertDatabaseHas('package_movements', [
             'company_id' => $company->id,
             'package_id' => $package->id,
-            'status' => 'incidencia_entrega',
+            'status' => 'intentos_carteros',
             'location' => 'LA PAZ',
             'description' => 'No se encontro al destinatario en domicilio.',
         ]);
