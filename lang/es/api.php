@@ -80,6 +80,7 @@ return [
         'cn31' => 'No se encontro el CN31 solicitado para esta empresa.',
         'cn33_bag' => 'La saca solicitada no existe para esta empresa.',
         'cn33_bag_register' => 'La saca indicada no existe para esta empresa. Debes registrar primero el CN31.',
+        'package' => 'El paquete :tracking_code no existe.',
     ],
     'validation' => [
         'bulk_manifest_required' => 'Debes enviar la estructura principal del manifiesto.',

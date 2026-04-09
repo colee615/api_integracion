@@ -80,6 +80,7 @@ return [
         'cn31' => 'The requested CN31 was not found for this company.',
         'cn33_bag' => 'The requested bag does not exist for this company.',
         'cn33_bag_register' => 'The indicated bag does not exist for this company. You must register the CN31 first.',
+        'package' => 'The package :tracking_code does not exist.',
     ],
     'validation' => [
         'bulk_manifest_required' => 'You must send the main manifest structure.',

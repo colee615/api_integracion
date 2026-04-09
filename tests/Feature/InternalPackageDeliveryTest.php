@@ -143,6 +143,18 @@ class InternalPackageDeliveryTest extends TestCase
             ->assertJsonValidationErrors(['tracking_code']);
     }
 
+    public function test_internal_delivery_api_returns_friendly_message_when_package_does_not_exist(): void
+    {
+        $this->postJson('/api/v1/internal/packages/deliver', [
+            'tracking_code' => 'EN000009999BO',
+        ], [
+            'Accept' => 'application/json',
+        ])->assertStatus(404)
+            ->assertJson([
+                'message' => __('api.not_found.package', ['tracking_code' => 'EN000009999BO']),
+            ]);
+    }
+
     public function test_internal_delivery_attempt_api_increments_attempts_and_creates_incident_movement(): void
     {
         $company = Company::create([
@@ -230,5 +242,18 @@ class InternalPackageDeliveryTest extends TestCase
             1,
             Cn33Package::where('tracking_code', 'EN000000903BO')->first()?->meta['delivery_attempts'] ?? null
         );
+    }
+
+    public function test_internal_delivery_attempt_api_returns_friendly_message_when_package_does_not_exist(): void
+    {
+        $this->postJson('/api/v1/internal/packages/delivery-attempt', [
+            'tracking_code' => 'EN000009998BO',
+            'description' => 'Intento de prueba',
+        ], [
+            'Accept' => 'application/json',
+        ])->assertStatus(404)
+            ->assertJson([
+                'message' => __('api.not_found.package', ['tracking_code' => 'EN000009998BO']),
+            ]);
     }
 }

@@ -27,7 +27,15 @@ class InternalPackageDeliveryController extends Controller
         $package = Package::query()
             ->with(['company', 'cn33Package.bag.manifest'])
             ->where('tracking_code', $validated['tracking_code'])
-            ->firstOrFail();
+            ->first();
+
+        if (! $package) {
+            return response()->json([
+                'message' => __('api.not_found.package', [
+                    'tracking_code' => $validated['tracking_code'],
+                ]),
+            ], 404);
+        }
 
         $occurredAt = now()->parse($validated['occurred_at'] ?? now());
         $movement = null;
