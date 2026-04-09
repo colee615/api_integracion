@@ -17,6 +17,7 @@ class Cn33Package extends Model
         'tracking_code',
         'reference',
         'recipient_name',
+        'origin',
         'destination',
         'weight_kg',
         'item_order',

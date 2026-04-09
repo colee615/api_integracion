@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{{ $title ?? 'API Integracion' }}</title>
+    <title>{{ $title ?? 'Integracion' }}</title>
     <style>
         :root {
             --bg: #f5f7fb;
@@ -82,7 +82,7 @@
     <div class="container">
         <div class="topbar">
             <div>
-                <div class="brand">API Integracion</div>
+                <div class="brand">Integracion</div>
                 <div class="muted">Backend multiempresa para trazabilidad de paquetes</div>
             </div>
             @auth

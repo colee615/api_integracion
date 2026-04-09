@@ -52,6 +52,7 @@ class ApiTokenFlowTest extends TestCase
             'bags' => [
                 [
                     'bag_number' => 'SACA-EN-001',
+                    'dispatch_number_bag' => '9876543210',
                     'package_count' => 1,
                     'total_weight_kg' => 0.250,
                 ],
@@ -60,11 +61,11 @@ class ApiTokenFlowTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('message', 'CN31 received successfully.');
 
-        $this->postJson('/api/v1/cn33/bags/SACA-EN-001/packages', [
+        $this->postJson('/api/v1/cn33/bags/9876543210/packages', [
             'packages' => [
                 [
                     'tracking_code' => 'EN000000201BO',
-                    'recipient_name' => 'John Doe',
+                    'origin' => 'COCHABAMBA',
                     'destination' => 'LA PAZ',
                     'weight_kg' => 0.250,
                 ],
@@ -91,7 +92,6 @@ class ApiTokenFlowTest extends TestCase
                     'recipient_department' => 'LA PAZ',
                     'recipient_phone' => '70000011',
                     'description' => 'books',
-                    'shipment_date' => '2026-03-31 16:05:00',
                     'gross_weight_grams' => 250,
                     'length_cm' => 20,
                     'width_cm' => 15,
@@ -277,7 +277,6 @@ class ApiTokenFlowTest extends TestCase
             'records' => [
                 [
                     'tracking_code' => 'EN000000001BO',
-                    'reference' => 'CN22-1',
                     'origin_office' => 'COCHABAMBA',
                     'destination_office' => 'LA PAZ',
                     'sender_name' => 'Leonardo Doria Medina',
@@ -294,7 +293,6 @@ class ApiTokenFlowTest extends TestCase
                     'recipient_whatsapp' => '76785423',
                     'destination' => 'LA PAZ',
                     'description' => 'documentos',
-                    'shipment_date' => '2026-03-27 14:38:21',
                     'gross_weight_grams' => 250,
                     'weight_kg' => 0.250,
                     'length_cm' => 20,
@@ -328,7 +326,6 @@ class ApiTokenFlowTest extends TestCase
                     'recipient_whatsapp' => '76785423',
                     'destination' => 'LA PAZ',
                     'description' => 'documentos',
-                    'shipment_date' => '2026-03-27 14:38:21',
                     'gross_weight_grams' => 250,
                     'weight_kg' => 0.250,
                     'length_cm' => 22,
@@ -386,6 +383,7 @@ class ApiTokenFlowTest extends TestCase
             'bags' => [
                 [
                     'bag_number' => 'SACA-001',
+                    'dispatch_number_bag' => '1111111111',
                     'package_count' => 2,
                     'total_weight_kg' => 0.500,
                 ],
@@ -395,17 +393,17 @@ class ApiTokenFlowTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.status', 'pendiente_cn33');
 
-        $this->postJson('/api/v1/cn33/bags/SACA-001/packages', [
+        $this->postJson('/api/v1/cn33/bags/1111111111/packages', [
             'packages' => [
                 [
                     'tracking_code' => 'EN000000001BO',
-                    'recipient_name' => 'Marco Antonio Espinoza Rojas',
+                    'origin' => 'COCHABAMBA',
                     'destination' => 'LA PAZ',
                     'weight_kg' => 0.250,
                 ],
                 [
                     'tracking_code' => 'EN000000004BO',
-                    'recipient_name' => 'Marco Antonio Espinoza Rojas',
+                    'origin' => 'COCHABAMBA',
                     'destination' => 'LA PAZ',
                     'weight_kg' => 0.250,
                 ],
@@ -436,7 +434,6 @@ class ApiTokenFlowTest extends TestCase
                     'recipient_whatsapp' => '76785423',
                     'destination' => 'LA PAZ',
                     'description' => 'documentos',
-                    'shipment_date' => '2026-03-31 16:05:00',
                     'gross_weight_grams' => 250,
                     'weight_kg' => 0.250,
                     'length_cm' => 20,
@@ -459,6 +456,7 @@ class ApiTokenFlowTest extends TestCase
         $this->assertDatabaseHas('cn31_bags', [
             'company_id' => $company->id,
             'bag_number' => 'SACA-001',
+            'dispatch_number_bag' => '1111111111',
             'status' => 'conciliado',
         ]);
 
@@ -470,6 +468,7 @@ class ApiTokenFlowTest extends TestCase
         $this->assertNotNull($package);
         $this->assertSame('CN31-0001-BO', $package->meta['cn31_number']);
         $this->assertSame('SACA-001', $package->meta['bag_number']);
+        $this->assertSame('1111111111', $package->meta['dispatch_number_bag']);
 
         $this->assertDatabaseHas('cn33_packages', [
             'company_id' => $company->id,
@@ -508,15 +507,15 @@ class ApiTokenFlowTest extends TestCase
                 'bags' => [
                     [
                         'bag_number' => 'SACA-BULK-001',
+                        'dispatch_number_bag' => '2222222222',
                         'package_count' => 2,
                         'total_weight_kg' => 0.500,
-                        'seal_number' => 'PRECINTO-BULK-01',
                         'dispatch_note' => 'Carga masiva principal',
                         'packages' => [
                             [
                                 'tracking_code' => 'EN000000801BO',
+                                'origin' => 'COCHABAMBA',
                                 'reference' => 'BULK-001',
-                                'recipient_name' => 'Cliente Uno',
                                 'destination' => 'LA PAZ',
                                 'weight_kg' => 0.250,
                                 'notes' => 'Primer paquete',
@@ -536,7 +535,6 @@ class ApiTokenFlowTest extends TestCase
                                     'recipient_phone' => '71111111',
                                     'recipient_whatsapp' => '71111111',
                                     'description' => 'Documentos',
-                                    'shipment_date' => '2026-04-08 11:05:00',
                                     'gross_weight_grams' => 250,
                                     'length_cm' => 20,
                                     'width_cm' => 15,
@@ -546,8 +544,8 @@ class ApiTokenFlowTest extends TestCase
                             ],
                             [
                                 'tracking_code' => 'EN000000802BO',
+                                'origin' => 'COCHABAMBA',
                                 'reference' => 'BULK-002',
-                                'recipient_name' => 'Cliente Dos',
                                 'destination' => 'LA PAZ',
                                 'weight_kg' => 0.250,
                                 'notes' => 'Segundo paquete',
@@ -567,7 +565,6 @@ class ApiTokenFlowTest extends TestCase
                                     'recipient_phone' => '72222222',
                                     'recipient_whatsapp' => '72222222',
                                     'description' => 'Ropa',
-                                    'shipment_date' => '2026-04-08 11:06:00',
                                     'gross_weight_grams' => 250,
                                     'length_cm' => 22,
                                     'width_cm' => 16,
@@ -597,6 +594,7 @@ class ApiTokenFlowTest extends TestCase
         $this->assertDatabaseHas('cn31_bags', [
             'company_id' => $company->id,
             'bag_number' => 'SACA-BULK-001',
+            'dispatch_number_bag' => '2222222222',
             'status' => 'conciliado',
         ]);
 
@@ -611,6 +609,108 @@ class ApiTokenFlowTest extends TestCase
             'tracking_code' => 'EN000000801BO',
             'status' => 'documentado_cn22',
         ]);
+    }
+
+    public function test_bulk_request_is_rejected_when_declared_weights_do_not_match_loaded_packages(): void
+    {
+        $company = Company::create([
+            'name' => 'Empresa Bulk Invalido',
+            'slug' => 'empresa-bulk-invalido',
+            'status' => 'active',
+        ]);
+
+        [, $plainTextToken] = ApiToken::issue(
+            $company,
+            'Token Bulk Invalido',
+            now()->subMinute(),
+            now()->addDays(30)
+        );
+
+        $headers = [
+            'Authorization' => 'Bearer '.$plainTextToken,
+            'Accept' => 'application/json',
+        ];
+
+        $this->postJson('/api/v1/integration/bulk', [
+            'manifest' => [
+                'cn31_number' => 'CN31-BULK-INVALID-001',
+                'origin_office' => 'COCHABAMBA',
+                'destination_office' => 'LA PAZ',
+                'dispatch_date' => '2026-04-08 11:00:00',
+                'bags' => [
+                    [
+                        'bag_number' => 'SACA-BULK-INVALID-001',
+                        'dispatch_number_bag' => '3333333333',
+                        'package_count' => 2,
+                        'total_weight_kg' => 0.700,
+                        'packages' => [
+                            [
+                                'tracking_code' => 'EN000000901BO',
+                                'origin' => 'COCHABAMBA',
+                                'destination' => 'LA PAZ',
+                                'weight_kg' => 0.250,
+                                'cn22' => [
+                                    'origin_office' => 'COCHABAMBA',
+                                    'destination_office' => 'LA PAZ',
+                                    'sender_name' => '360 Lions',
+                                    'sender_country' => 'BOLIVIA',
+                                    'sender_address' => 'Av. Integracion 100',
+                                    'sender_phone' => '70000001',
+                                    'recipient_name' => 'Cliente Uno',
+                                    'recipient_document' => '7000901',
+                                    'recipient_address' => 'Calle Uno 123',
+                                    'recipient_address_reference' => 'Puerta azul',
+                                    'recipient_city' => 'LA PAZ',
+                                    'recipient_department' => 'LA PAZ',
+                                    'recipient_phone' => '71111111',
+                                    'recipient_whatsapp' => '71111111',
+                                    'description' => 'Documentos',
+                                    'gross_weight_grams' => 250,
+                                    'length_cm' => 20,
+                                    'width_cm' => 15,
+                                    'height_cm' => 2,
+                                    'value_fob_usd' => 18.00,
+                                ],
+                            ],
+                            [
+                                'tracking_code' => 'EN000000902BO',
+                                'origin' => 'COCHABAMBA',
+                                'destination' => 'LA PAZ',
+                                'weight_kg' => 0.250,
+                                'cn22' => [
+                                    'origin_office' => 'COCHABAMBA',
+                                    'destination_office' => 'LA PAZ',
+                                    'sender_name' => '360 Lions',
+                                    'sender_country' => 'BOLIVIA',
+                                    'sender_address' => 'Av. Integracion 100',
+                                    'sender_phone' => '70000001',
+                                    'recipient_name' => 'Cliente Dos',
+                                    'recipient_document' => '7000902',
+                                    'recipient_address' => 'Calle Dos 456',
+                                    'recipient_address_reference' => 'Frente a plaza',
+                                    'recipient_city' => 'LA PAZ',
+                                    'recipient_department' => 'LA PAZ',
+                                    'recipient_phone' => '72222222',
+                                    'recipient_whatsapp' => '72222222',
+                                    'description' => 'Ropa',
+                                    'gross_weight_grams' => 250,
+                                    'length_cm' => 22,
+                                    'width_cm' => 16,
+                                    'height_cm' => 4,
+                                    'value_fob_usd' => 25.00,
+                                ],
+                            ],
+                        ],
+                    ],
+                ],
+            ],
+        ], $headers)
+            ->assertStatus(422)
+            ->assertJsonPath('success', false)
+            ->assertJsonPath('code', 'BULK_INTEGRATION_VALIDATION_ERROR')
+            ->assertJsonFragment([
+                'field' => 'manifest.bags.0.total_weight_kg',
+            ]);
     }
 
     public function test_cn31_and_cn33_return_understandable_validation_errors(): void
@@ -673,6 +773,7 @@ class ApiTokenFlowTest extends TestCase
             'packages' => [
                 [
                     'tracking_code' => 'EN000000001BO',
+                    'origin' => 'COCHABAMBA',
                 ],
             ],
         ], $headers)
@@ -680,9 +781,9 @@ class ApiTokenFlowTest extends TestCase
             ->assertJsonPath('success', false)
             ->assertJsonPath('code', 'CN33_VALIDATION_ERROR')
             ->assertJsonFragment([
-                'field' => 'packages.0.recipient_name',
+                'field' => 'packages.0.destination',
                 'record_index' => 0,
-                'attribute' => 'recipient_name',
+                'attribute' => 'destination',
             ]);
     }
 
@@ -865,7 +966,6 @@ class ApiTokenFlowTest extends TestCase
                     'recipient_department' => 'LA PAZ',
                     'recipient_phone' => '70000002',
                     'description' => 'ropa deportiva',
-                    'shipment_date' => '2026-03-31 10:00:00',
                     'gross_weight_grams' => 500,
                     'length_cm' => 20,
                     'width_cm' => 20,
@@ -888,7 +988,6 @@ class ApiTokenFlowTest extends TestCase
                     'recipient_department' => 'LA PAZ',
                     'recipient_phone' => '70000004',
                     'description' => 'accesorios',
-                    'shipment_date' => '2026-03-31 10:05:00',
                     'gross_weight_grams' => 400,
                     'length_cm' => 18,
                     'width_cm' => 12,

@@ -35,7 +35,6 @@
                         <th>Paquete</th>
                         <th>Estado</th>
                         <th>Ubicacion</th>
-                        <th>Fecha</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -44,11 +43,10 @@
                             <td>{{ $movement->package->tracking_code }}</td>
                             <td>{{ $movement->status }}</td>
                             <td>{{ $movement->location ?? 'Sin dato' }}</td>
-                            <td>{{ $movement->occurred_at?->format('Y-m-d H:i') }}</td>
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="4" class="muted">Todavia no hay movimientos registrados.</td>
+                            <td colspan="3" class="muted">Todavia no hay movimientos registrados.</td>
                         </tr>
                     @endforelse
                 </tbody>

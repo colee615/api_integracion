@@ -10,7 +10,6 @@
     <section class="page-hero">
         <span class="page-kicker"><i class="fas fa-users-cog"></i> Seguridad interna</span>
         <h1 class="page-title">Gestión de usuarios internos</h1>
-        <p class="page-subtitle">Controla el acceso del equipo interno, define cuentas activas y mantén trazabilidad sobre quién administra la plataforma.</p>
     </section>
 @stop
 
@@ -32,19 +31,15 @@
                             <option value="active">Activo</option>
                             <option value="inactive">Inactivo</option>
                         </x-adminlte-select>
-                        <x-adminlte-button type="submit" theme="primary" label="Crear usuario" icon="fas fa-save"/>
+                        <x-adminlte-button type="submit" theme="primary" label="Guardar usuario" icon="fas fa-save" class="table-style-submit"/>
                     </form>
                 </x-adminlte-card>
             </div>
 
             <div class="col-md-8">
                 <x-adminlte-card title="Directorio interno" theme="light" icon="fas fa-id-badge" class="panel-card">
-                    <div class="section-note mb-3">
-                        Lista de usuarios con acceso al panel administrativo y su estado actual de disponibilidad.
-                    </div>
-
                     <div class="table-responsive">
-                        <table class="table corp-table">
+                        <table class="table corp-table user-table">
                             <thead>
                                 <tr>
                                     <th>Usuario</th>
@@ -67,17 +62,19 @@
                                         </td>
                                         <td>{{ $user->last_login_at?->format('Y-m-d H:i') ?? 'Sin ingresos' }}</td>
                                         <td>
-                                            <form method="POST" action="{{ route('admin.users.status', $user) }}" class="inline-actions">
-                                                @csrf
-                                                @method('PATCH')
-                                                <input type="hidden" name="status" value="{{ $user->status === 'active' ? 'inactive' : 'active' }}">
-                                                <x-adminlte-button
-                                                    type="submit"
-                                                    theme="{{ $user->status === 'active' ? 'secondary' : 'success' }}"
-                                                    label="{{ $user->status === 'active' ? 'Desactivar' : 'Activar' }}"
-                                                    size="xs"
-                                                    icon="fas fa-exchange-alt"/>
-                                            </form>
+                                            <div class="inline-actions">
+                                                <button
+                                                    type="button"
+                                                    class="btn btn-xs btn-info js-open-user-modal"
+                                                    data-toggle="modal"
+                                                    data-target="#user-edit-modal"
+                                                    data-action="{{ route('admin.users.status', $user) }}"
+                                                    data-name="{{ $user->name }}"
+                                                    data-email="{{ $user->email }}"
+                                                    data-status="{{ $user->status }}">
+                                                    <i class="fas fa-edit"></i> Editar
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 @empty
@@ -92,8 +89,63 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="user-edit-modal" tabindex="-1" aria-labelledby="user-edit-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" id="user-edit-form">
+                    @csrf
+                    @method('PATCH')
+
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="user-edit-modal-label">Editar usuario interno</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="form-group mb-0">
+                            <label for="user-edit-status">Estado operativo</label>
+                            <select name="status" id="user-edit-status" class="form-control" required>
+                                <option value="active">Activo</option>
+                                <option value="inactive">Inactivo</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-info">
+                            <i class="fas fa-save"></i> Guardar cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@stop
+
+@section('js')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('user-edit-form');
+    const nameField = document.getElementById('user-edit-name');
+    const emailField = document.getElementById('user-edit-email');
+    const statusField = document.getElementById('user-edit-status');
+
+    document.querySelectorAll('.js-open-user-modal').forEach(function (button) {
+        button.addEventListener('click', function () {
+            form.action = button.dataset.action;
+            nameField.textContent = button.dataset.name || 'Usuario';
+            emailField.textContent = button.dataset.email || '';
+            statusField.value = button.dataset.status || 'active';
+        });
+    });
+});
+</script>
 @stop
 
 @section('footer')
-    <strong>API Integracion.</strong> Gestion interna de usuarios.
+    <strong>Integracion.</strong> Gestion interna de usuarios.
 @stop

@@ -1,273 +1,30 @@
 @extends('adminlte::page')
 
-@section('title', 'Detalle de Empresa')
+@section('title', 'Control Operativo de Empresa')
 
 @section('css')
     @include('admin.partials.enterprise-theme')
     <style>
-        .interactive-row {
-            cursor: pointer;
-        }
-
-        .interactive-row:hover {
-            background: #f3f8ff !important;
-        }
-
-        .interactive-trigger {
-            display: inline-flex;
-            align-items: center;
-            gap: .45rem;
-            padding: .4rem .7rem;
-            border: 1px solid #d8e1eb;
-            border-radius: .75rem;
-            background: #fff;
-            color: #1d4f91;
-            font-size: .8rem;
-            font-weight: 600;
-        }
-
-        .modal-panel {
-            border: 1px solid #e2e8f0;
-            border-radius: .9rem;
-            background: #f8fbfd;
-            padding: 1rem;
-            margin-bottom: 1rem;
-        }
-
-        .detail-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: .75rem;
-        }
-
-        .detail-grid .item {
-            border: 1px solid #e2e8f0;
-            border-radius: .85rem;
-            background: #fff;
-            padding: .85rem .95rem;
-        }
-
-        .detail-grid .item .label {
-            display: block;
-            font-size: .74rem;
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            color: #64748b;
-            margin-bottom: .25rem;
-        }
-
-        .detail-grid .item .value {
-            color: #0f172a;
-            font-weight: 600;
-            word-break: break-word;
-        }
-
-        .modal-table {
-            margin-bottom: 0;
-        }
-
-        .modal-table td,
-        .modal-table th {
-            vertical-align: middle;
-        }
-
-        .progress-panel {
-            border: 1px solid #d9e6f2;
-            border-radius: 1rem;
-            background: linear-gradient(135deg, #eef7ff 0%, #ffffff 100%);
-            padding: 1rem 1.1rem;
-            margin-bottom: 1rem;
-        }
-
-        .progress-panel .headline {
-            display: flex;
-            align-items: flex-end;
-            justify-content: space-between;
-            gap: 1rem;
-            margin-bottom: .6rem;
-            flex-wrap: wrap;
-        }
-
-        .progress-panel .headline .title {
-            font-size: .8rem;
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            color: #52708f;
-            font-weight: 700;
-        }
-
-        .progress-panel .headline .value {
-            color: #0f172a;
-            font-size: 1.9rem;
-            font-weight: 800;
-        }
-
-        .progress-panel .headline .subtitle {
-            width: 100%;
-            color: #5f7895;
-            font-size: .95rem;
-            margin-top: -.25rem;
-        }
-
-        .progress-bar-shell {
-            height: .95rem;
-            background: #dbeafe;
-            border-radius: 999px;
-            overflow: hidden;
-            margin-bottom: 1rem;
-        }
-
-        .progress-bar-fill {
-            height: 100%;
-            background: linear-gradient(90deg, #0f766e 0%, #22c55e 100%);
-            border-radius: 999px;
-        }
-
-        .package-metrics {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: .8rem;
-            margin-bottom: .85rem;
-        }
-
-        .package-metric {
-            border: 1px solid #d9e6f2;
-            border-radius: .9rem;
-            background: #fff;
-            padding: .9rem 1rem;
-        }
-
-        .package-metric .label {
-            display: block;
-            font-size: .74rem;
-            text-transform: uppercase;
-            letter-spacing: .08em;
-            color: #6b7f95;
-            margin-bottom: .35rem;
-        }
-
-        .package-metric .value {
-            display: block;
-            font-size: 1.35rem;
-            font-weight: 800;
-            color: #0f172a;
-            line-height: 1.1;
-        }
-
-        .package-metric .hint {
-            display: block;
-            margin-top: .25rem;
-            color: #64748b;
-            font-size: .82rem;
-        }
-
-        .package-metric.is-delivered {
-            background: linear-gradient(180deg, #f0fdf4 0%, #ffffff 100%);
-            border-color: #bbf7d0;
-        }
-
-        .package-metric.is-pending {
-            background: linear-gradient(180deg, #fff7ed 0%, #ffffff 100%);
-            border-color: #fed7aa;
-        }
-
-        .progress-footnote {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-            flex-wrap: wrap;
-            color: #64748b;
-            font-size: .9rem;
-        }
-
-        .bag-progress-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: .9rem;
-            margin-top: 1rem;
-        }
-
-        .bag-progress-card {
-            border: 1px solid #d9e6f2;
-            border-radius: 1rem;
-            background: #fff;
-            padding: 1rem;
-        }
-
-        .bag-progress-card .topline {
-            display: flex;
-            justify-content: space-between;
-            gap: 1rem;
-            align-items: flex-start;
-            margin-bottom: .55rem;
-        }
-
-        .bag-progress-card .bag-name {
-            font-size: 1rem;
-            font-weight: 800;
-            color: #0f172a;
-        }
-
-        .bag-progress-card .bag-meta {
-            color: #64748b;
-            font-size: .82rem;
-            margin-top: .15rem;
-        }
-
-        .bag-progress-card .bag-ratio {
-            font-size: 1rem;
-            font-weight: 800;
-            color: #0f172a;
-            white-space: nowrap;
-        }
-
-        .bag-progress-card .bag-message {
-            color: #334155;
-            font-size: .93rem;
-            margin-bottom: .55rem;
-        }
-
-        .bag-progress-card .bag-footer {
-            display: flex;
-            justify-content: space-between;
-            gap: .8rem;
-            flex-wrap: wrap;
-            color: #64748b;
-            font-size: .82rem;
-            margin-top: .55rem;
-        }
-
-        @media (max-width: 992px) {
-            .package-metrics {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
-
-            .bag-progress-grid {
-                grid-template-columns: 1fr;
-            }
-        }
-
-        @media (max-width: 576px) {
-            .package-metrics {
-                grid-template-columns: 1fr;
-            }
-        }
+        .ops-shell{display:grid;gap:1rem}.ops-header,.ops-card{border:1px solid #d9e6f2;border-radius:1rem;background:#fff}.ops-header{padding:1.25rem;display:flex;justify-content:space-between;gap:1rem;flex-wrap:wrap;background:linear-gradient(135deg,#f8fbfd 0%,#fff 100%)}.ops-kicker,.ops-label{font-size:.74rem;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:800}.ops-title{margin:.35rem 0 0;font-size:2rem;font-weight:900;color:#10213f}.ops-subtitle{margin:.45rem 0 0;color:#55657d;max-width:760px}.ops-actions{display:flex;gap:.6rem;flex-wrap:wrap;align-items:start}.ops-btn,.ops-btn:hover{display:inline-flex;align-items:center;gap:.45rem;min-height:2.7rem;padding:0 1rem;border-radius:.85rem;border:1px solid #d9e6f2;background:#fff;color:#1d4f91;text-decoration:none;font-weight:700}.ops-btn-primary,.ops-btn-primary:hover{background:#10213f;border-color:#10213f;color:#fff}.ops-btn-danger,.ops-btn-danger:hover{background:#fff5f5;border-color:#fecaca;color:#b42318}.ops-form-inline{display:inline-flex}.ops-meta-grid,.ops-stat-grid,.ops-explorer,.ops-detail-grid,.ops-person-grid,.ops-mini-grid,.ops-vs-grid{display:grid;gap:.85rem}.ops-meta-grid{grid-template-columns:repeat(4,minmax(0,1fr))}.ops-stat-grid{grid-template-columns:repeat(6,minmax(0,1fr))}.ops-vs-grid{grid-template-columns:repeat(3,minmax(0,1fr))}.ops-explorer{grid-template-columns:1.1fr 1fr 1fr}.ops-detail-grid{grid-template-columns:1.4fr .8fr}.ops-person-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ops-mini-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ops-meta,.ops-stat,.ops-panel,.ops-vs-card{padding:1rem;border:1px solid #d9e6f2;border-radius:1rem;background:#fff}.ops-meta-value,.ops-stat-value{display:block;color:#10213f;font-weight:900}.ops-meta-value{font-size:1rem;margin-top:.2rem}.ops-stat-value{font-size:1.7rem;line-height:1;margin:.3rem 0}.ops-note{color:#64748b;font-size:.88rem;line-height:1.45}.ops-search{padding:1rem;border:1px solid #d9e6f2;border-radius:1rem;background:linear-gradient(135deg,#f8fbfd 0%,#fff 100%)}.ops-search-row{display:flex;gap:.75rem;flex-wrap:wrap;align-items:end}.ops-search-field{flex:1 1 360px}.ops-search-field label{display:block;margin-bottom:.4rem;font-size:.75rem;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:800}.ops-search-field input,.ops-select{width:100%;min-height:2.9rem;border:1px solid #d9e6f2;border-radius:.85rem;padding:0 .9rem;background:#fff;font-weight:600;color:#10213f}.ops-search-result{margin-top:.75rem;color:#64748b;font-size:.92rem}.ops-search-result.is-error{color:#b42318}.ops-panel-title{margin:0 0 .75rem;font-size:1.05rem;font-weight:800;color:#10213f}.ops-list{display:grid;gap:.75rem;max-height:32rem;overflow:auto}.ops-list-card{width:100%;text-align:left;border:1px solid #d9e6f2;border-radius:1rem;background:#fff;padding:.95rem 1rem;transition:.18s ease}.ops-list-card:hover,.ops-list-card.active{border-color:#93c5fd;box-shadow:0 12px 24px rgba(37,99,235,.08);transform:translateY(-1px)}.ops-list-top{display:flex;justify-content:space-between;gap:.75rem;align-items:start;margin-bottom:.35rem}.ops-list-title{display:block;font-weight:800;color:#10213f}.ops-list-meta{display:block;color:#64748b;font-size:.85rem;line-height:1.4}.ops-empty{border:1px dashed #cbd5e1;border-radius:1rem;padding:1rem;background:#f8fbff;color:#64748b}.ops-summary-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;margin-bottom:.9rem}.ops-summary{border:1px solid #d9e6f2;border-radius:1rem;background:#f8fbff;padding:.9rem 1rem}.ops-summary strong{display:block;color:#10213f;font-size:1.05rem;margin-top:.2rem}.ops-person{border:1px solid #d9e6f2;border-radius:1rem;overflow:hidden;background:#fff}.ops-person-head{padding:.8rem 1rem;background:#f8fbff;border-bottom:1px solid #e6eef7;display:flex;justify-content:space-between;align-items:center}.ops-person-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#335b8e;font-weight:800}.ops-person-body{padding:1rem;display:grid;gap:.75rem}.ops-person-name{font-size:1.15rem;font-weight:900;color:#10213f}.ops-item{border:1px solid #e2e8f0;border-radius:.85rem;padding:.85rem .95rem;background:#fff}.ops-item-value{display:block;margin-top:.2rem;color:#0f172a;font-weight:700;word-break:break-word}.ops-vs-card{background:linear-gradient(180deg,#fff 0%,#f8fbff 100%)}.ops-vs-top{display:flex;justify-content:space-between;gap:.75rem;align-items:end;margin-bottom:.55rem}.ops-vs-title{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#64748b;font-weight:800}.ops-vs-ratio{font-size:1.35rem;font-weight:900;color:#10213f}.ops-vs-track{height:.9rem;border-radius:999px;background:#e5edf8;overflow:hidden;margin-bottom:.65rem}.ops-vs-fill{display:block;height:100%;border-radius:999px;background:linear-gradient(90deg,#0f766e 0%,#22c55e 100%)}.ops-vs-meta{display:flex;justify-content:space-between;gap:.75rem;flex-wrap:wrap;color:#64748b;font-size:.86rem}.status-pill{display:inline-flex;align-items:center;justify-content:center;padding:.38rem .8rem;border-radius:999px;font-size:.82rem;font-weight:800;border:1px solid transparent;line-height:1}.status-pill.status-entregado,.status-pill.status-conciliado,.status-pill.status-active,.status-pill.status-activa,.status-pill.status-activo{background:#ecfdf3;color:#027a48;border-color:#abefc6}.status-pill.status-en_proceso_aduana,.status-pill.status-liberado_aduana,.status-pill.status-en_ruta_entrega,.status-pill.status-recibido_centro_clasificacion,.status-pill.status-documentado_cn22,.status-pill.status-pre_alerta_recibida{background:#eff8ff;color:#175cd3;border-color:#b2ddff}.status-pill.status-pendiente_cn33,.status-pill.status-pendiente_cn22,.status-pill.status-programado{background:#fffaeb;color:#b54708;border-color:#fedf89}.status-pill.status-observado,.status-pill.status-incidencia_entrega,.status-pill.status-revocado,.status-pill.status-expirado,.status-pill.status-inactivo{background:#fef3f2;color:#b42318;border-color:#fecdca}@media (max-width:1200px){.ops-meta-grid,.ops-stat-grid,.ops-vs-grid,.ops-explorer,.ops-detail-grid,.ops-summary-grid,.ops-person-grid,.ops-mini-grid{grid-template-columns:1fr}}
     </style>
 @stop
 
 @section('content_header')
-    <div class="page-shell">
-        <section class="page-hero">
-            <span class="page-kicker"><i class="fas fa-building"></i> Vista operativa</span>
-            <h1 class="page-title">{{ $company->name }}</h1>
-            <p class="page-subtitle">Desde esta vista puedes revisar lo que la empresa ha cargado en la integracion: tokens, manifiestos, sacas, paquetes y movimientos.</p>
-        </section>
-    </div>
+    <div></div>
 @stop
 
 @section('content')
     @php
-        $manifestExplorer = $recentManifests->map(function ($manifest) {
+        $pendingCn22 = max(($summary['cn33_packages'] ?? 0) - ($summary['packages'] ?? 0), 0);
+        $manifestCompletionPct = ($summary['manifests'] ?? 0) > 0 ? round((($summary['delivered_manifests'] ?? 0) / $summary['manifests']) * 100, 1) : 0;
+        $bagCompletionPct = ($summary['bags'] ?? 0) > 0 ? round((($summary['delivered_bags'] ?? 0) / $summary['bags']) * 100, 1) : 0;
+        $packageCompletionPct = ($summary['cn33_packages'] ?? 0) > 0 ? round((($summary['delivered_packages'] ?? 0) / $summary['cn33_packages']) * 100, 1) : 0;
+        $latestManifest = $recentManifests->first();
+        $latestPackage = $recentPackages->first();
+        $latestMovement = $recentMovements->first();
+        $latestToken = $company->apiTokens->first();
+
+        $explorerData = $recentManifests->map(function ($manifest) {
             return [
                 'id' => $manifest->id,
                 'cn31_number' => $manifest->cn31_number,
@@ -276,38 +33,33 @@
                 'dispatch_date' => $manifest->dispatch_date?->format('Y-m-d H:i'),
                 'total_bags' => $manifest->total_bags,
                 'total_packages' => $manifest->total_packages,
-                'total_weight_kg' => (float) $manifest->total_weight_kg,
                 'status' => $manifest->status,
-                'delivered_at' => $manifest->meta['delivered_at'] ?? null,
                 'bags' => $manifest->bags->map(function ($bag) {
                     return [
                         'id' => $bag->id,
                         'bag_number' => $bag->bag_number,
+                        'dispatch_number_bag' => $bag->dispatch_number_bag,
                         'status' => $bag->status,
-                        'delivered_at' => $bag->meta['delivered_at'] ?? null,
-                        'declared_package_count' => $bag->declared_package_count,
+                        'declared_package_count' => (int) $bag->declared_package_count,
                         'declared_weight_kg' => (float) $bag->declared_weight_kg,
-                        'loaded_package_count' => (int) ($bag->meta['loaded_package_count'] ?? 0),
-                        'loaded_weight_kg' => (float) ($bag->meta['loaded_weight_kg'] ?? 0),
+                        'loaded_package_count' => (int) ($bag->meta['loaded_package_count'] ?? $bag->cn33Packages->count()),
+                        'loaded_weight_kg' => (float) ($bag->meta['loaded_weight_kg'] ?? $bag->cn33Packages->sum('weight_kg')),
                         'packages' => $bag->cn33Packages->map(function ($cn33) {
                             $package = $cn33->package;
-
                             return [
                                 'id' => $cn33->id,
                                 'tracking_code' => $cn33->tracking_code,
-                                'reference' => $cn33->reference,
-                                'recipient_name' => $cn33->recipient_name,
+                                'origin' => $cn33->origin,
                                 'destination' => $cn33->destination,
                                 'weight_kg' => (float) $cn33->weight_kg,
                                 'status' => $cn33->status,
-                                'delivered_at' => $cn33->meta['delivered_at'] ?? null,
                                 'package_detail' => $package ? [
                                     'tracking_code' => $package->tracking_code,
-                                    'reference' => $package->reference,
                                     'status' => $package->status,
-                                    'delivered_at' => $package->meta['delivered_at'] ?? null,
                                     'sender_name' => $package->sender_name,
                                     'sender_country' => $package->sender_country,
+                                    'sender_address' => $package->sender_address,
+                                    'sender_phone' => $package->sender_phone,
                                     'recipient_name' => $package->recipient_name,
                                     'recipient_document' => $package->recipient_document,
                                     'recipient_phone' => $package->recipient_phone,
@@ -321,19 +73,13 @@
                                     'description' => $package->shipment_description,
                                     'gross_weight_grams' => $package->gross_weight_grams,
                                     'weight_kg' => $package->weight_kg !== null ? (float) $package->weight_kg : null,
-                                    'dimensions' => trim(collect([
-                                        $package->length_cm,
-                                        $package->width_cm,
-                                        $package->height_cm,
-                                    ])->filter(fn ($value) => $value !== null)->implode(' x ')),
                                     'value_fob_usd' => $package->value_fob_usd !== null ? (float) $package->value_fob_usd : null,
-                                    'shipment_date' => $package->shipment_date?->format('Y-m-d H:i'),
-                                    'registered_at' => $package->registered_at?->format('Y-m-d H:i'),
+                                    'registered_at' => optional($package->registered_at)->format('Y-m-d H:i'),
+                                    'last_movement_at' => optional($package->last_movement_at)->format('Y-m-d H:i'),
                                     'movements' => $package->movements->map(fn ($movement) => [
                                         'status' => $movement->status,
                                         'location' => $movement->location,
                                         'description' => $movement->description,
-                                        'occurred_at' => $movement->occurred_at?->format('Y-m-d H:i'),
                                     ])->values(),
                                 ] : null,
                             ];
@@ -342,427 +88,127 @@
                 })->values(),
             ];
         })->values();
-
-        $bagDeliveryProgress = $recentBags->map(function ($bag) {
-            $declared = (int) $bag->declared_package_count;
-            $delivered = $bag->cn33Packages->where('status', 'entregado')->count();
-            $pending = max($declared - $delivered, 0);
-            $pct = $declared > 0 ? round(($delivered / $declared) * 100, 1) : 0.0;
-
-            if ($declared === 0) {
-                $message = 'Esta saca no tiene paquetes declarados.';
-            } elseif ($delivered === 0) {
-                $message = "No se entrego ningun paquete de esta saca. Faltan {$pending}.";
-            } elseif ($pending === 0) {
-                $message = "Todos los {$declared} paquetes de esta saca fueron entregados.";
-            } else {
-                $message = "Se entregaron {$delivered} de {$declared} paquetes. Faltan {$pending}.";
-            }
-
-            return [
-                'bag_number' => $bag->bag_number,
-                'manifest_number' => $bag->manifest?->cn31_number,
-                'status' => $bag->status,
-                'declared' => $declared,
-                'delivered' => $delivered,
-                'pending' => $pending,
-                'pct' => $pct,
-                'message' => $message,
-            ];
-        });
     @endphp
 
     <div class="page-shell">
-        <div class="row">
-            <div class="col-lg-2 col-6">
-                <div class="metric-card">
-                    <x-adminlte-small-box title="{{ $summary['tokens'] }}" text="Tokens" icon="fas fa-key" theme="white"/>
+        <div class="ops-shell">
+            <section class="ops-stat-grid">
+                <article class="ops-stat"><span class="ops-label">CN31 recibidos</span><span class="ops-stat-value">{{ $summary['manifests'] }}</span><span class="ops-note">Marbetes reportados.</span></article>
+                <article class="ops-stat"><span class="ops-label">Sacas CN33</span><span class="ops-stat-value">{{ $summary['bags'] }}</span><span class="ops-note">Sacas declaradas.</span></article>
+                <article class="ops-stat"><span class="ops-label">Paquetes declarados</span><span class="ops-stat-value">{{ $summary['cn33_packages'] }}</span><span class="ops-note">Tracking dentro de sacas.</span></article>
+                <article class="ops-stat"><span class="ops-label">CN22 registrados</span><span class="ops-stat-value">{{ $summary['packages'] }}</span><span class="ops-note">Paquetes documentados.</span></article>
+                <article class="ops-stat"><span class="ops-label">Pendientes CN22</span><span class="ops-stat-value">{{ $pendingCn22 }}</span><span class="ops-note">Brecha documental actual.</span></article>
+                <article class="ops-stat"><span class="ops-label">Entregados</span><span class="ops-stat-value">{{ $summary['delivered_packages'] }}</span><span class="ops-note">{{ number_format($summary['delivery_progress_pct'], 1) }}% del total.</span></article>
+            </section>
+
+            <section class="ops-vs-grid">
+                <article class="ops-vs-card">
+                    <div class="ops-vs-top">
+                        <span class="ops-vs-title">CN31 enviados vs cerrados</span>
+                        <span class="ops-vs-ratio">{{ $summary['delivered_manifests'] }} / {{ $summary['manifests'] }}</span>
+                    </div>
+                    <div class="ops-vs-track"><span class="ops-vs-fill" style="width: {{ $manifestCompletionPct }}%;"></span></div>
+                    <div class="ops-vs-meta">
+                        <span>Nos enviaron: {{ $summary['manifests'] }}</span>
+                        <span>Cerrados: {{ $summary['delivered_manifests'] }}</span>
+                        <span>{{ number_format($manifestCompletionPct, 1) }}%</span>
+                    </div>
+                </article>
+
+                <article class="ops-vs-card">
+                    <div class="ops-vs-top">
+                        <span class="ops-vs-title">Sacas enviadas vs completadas</span>
+                        <span class="ops-vs-ratio">{{ $summary['delivered_bags'] }} / {{ $summary['bags'] }}</span>
+                    </div>
+                    <div class="ops-vs-track"><span class="ops-vs-fill" style="width: {{ $bagCompletionPct }}%;"></span></div>
+                    <div class="ops-vs-meta">
+                        <span>Nos enviaron: {{ $summary['bags'] }}</span>
+                        <span>Completadas: {{ $summary['delivered_bags'] }}</span>
+                        <span>{{ number_format($bagCompletionPct, 1) }}%</span>
+                    </div>
+                </article>
+
+                <article class="ops-vs-card">
+                    <div class="ops-vs-top">
+                        <span class="ops-vs-title">Paquetes enviados vs entregados</span>
+                        <span class="ops-vs-ratio">{{ $summary['delivered_packages'] }} / {{ $summary['cn33_packages'] }}</span>
+                    </div>
+                    <div class="ops-vs-track"><span class="ops-vs-fill" style="width: {{ $packageCompletionPct }}%;"></span></div>
+                    <div class="ops-vs-meta">
+                        <span>Nos enviaron: {{ $summary['cn33_packages'] }}</span>
+                        <span>Entregados: {{ $summary['delivered_packages'] }}</span>
+                        <span>{{ number_format($packageCompletionPct, 1) }}%</span>
+                    </div>
+                </article>
+            </section>
+
+            <section class="ops-search">
+                <div class="ops-search-row">
+                    <div class="ops-search-field">
+                        <label for="integrationSearchInput">Busqueda global de integracion</label>
+                        <input id="integrationSearchInput" type="text" placeholder="Busca un CN31, una saca CN33 o un tracking, por ejemplo CBB000005 o EN000001001BO">
+                    </div>
+                    <button type="button" class="ops-btn ops-btn-primary" id="integrationSearchButton"><i class="fas fa-search"></i> Buscar</button>
                 </div>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div class="metric-card">
-                    <x-adminlte-small-box title="{{ $summary['manifests'] }}" text="CN31" icon="fas fa-file-alt" theme="white"/>
-                </div>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div class="metric-card">
-                    <x-adminlte-small-box title="{{ $summary['bags'] }}" text="Sacas" icon="fas fa-shopping-bag" theme="white"/>
-                </div>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div class="metric-card">
-                    <x-adminlte-small-box title="{{ $summary['cn33_packages'] }}" text="CN33" icon="fas fa-boxes" theme="white"/>
-                </div>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div class="metric-card">
-                    <x-adminlte-small-box title="{{ $summary['packages'] }}" text="Paquetes" icon="fas fa-box" theme="white"/>
-                </div>
-            </div>
-            <div class="col-lg-2 col-6">
-                <div class="metric-card">
-                    <x-adminlte-small-box title="{{ $summary['movements'] }}" text="Movimientos" icon="fas fa-route" theme="white"/>
-                </div>
-            </div>
+                <div class="ops-search-result" id="integrationSearchResult">Busca cualquier identificador operativo y el explorador se posicionara directamente en el resultado.</div>
+            </section>
+
+            <section class="ops-explorer">
+                <article class="ops-panel"><h2 class="ops-panel-title">CN31 recientes</h2><div id="manifestListHost" class="ops-list"></div></article>
+                <article class="ops-panel"><h2 class="ops-panel-title">Sacas del CN31 seleccionado</h2><div id="bagListHost" class="ops-list"></div></article>
+                <article class="ops-panel"><h2 class="ops-panel-title">Paquetes de la saca seleccionada</h2><div id="packageListHost" class="ops-list"></div></article>
+            </section>
+
+            <section class="ops-panel">
+                <h2 class="ops-panel-title">Detalle del paquete seleccionado</h2>
+                <div id="packageDetailHost" class="ops-empty">Selecciona un tracking para ver remitente, destinatario y movimientos.</div>
+            </section>
         </div>
+    </div>
 
-        <div class="progress-panel">
-            <div class="headline">
-                <span class="title">Avance de entrega</span>
-                <span class="value">{{ $summary['delivered_packages'] }} / {{ $summary['packages'] }} paquetes</span>
-                <span class="subtitle">Seguimiento detallado de paquetes entregados frente al total recibido desde la empresa.</span>
-            </div>
-            <div class="progress-bar-shell">
-                <div class="progress-bar-fill" style="width: {{ $summary['delivery_progress_pct'] }}%;"></div>
-            </div>
-            <div class="package-metrics">
-                <div class="package-metric">
-                    <span class="label">Total recibido</span>
-                    <span class="value">{{ $summary['packages'] }}</span>
-                    <span class="hint">Paquetes cargados por la empresa</span>
+    <div class="modal fade" id="companySettingsModal" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="modal-dialog" role="document">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Editar empresa</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
-                <div class="package-metric is-delivered">
-                    <span class="label">Entregados</span>
-                    <span class="value">{{ $summary['delivered_packages'] }}</span>
-                    <span class="hint">{{ $summary['delivery_progress_pct'] }}% del total</span>
-                </div>
-                <div class="package-metric is-pending">
-                    <span class="label">Pendientes</span>
-                    <span class="value">{{ $summary['pending_delivery_packages'] }}</span>
-                    <span class="hint">Aun no marcados como entregados</span>
-                </div>
-                <div class="package-metric">
-                    <span class="label">Relacion actual</span>
-                    <span class="value">{{ $summary['delivered_packages'] }} : {{ $summary['pending_delivery_packages'] }}</span>
-                    <span class="hint">Entregados vs pendientes</span>
-                </div>
-            </div>
-            <div class="progress-footnote">
-                <span>{{ $summary['delivered_bags'] }} / {{ $summary['bags'] }} sacas completadas</span>
-                <span>{{ $summary['delivered_manifests'] }} / {{ $summary['manifests'] }} manifiestos completados</span>
-            </div>
-            @if($bagDeliveryProgress->isNotEmpty())
-                <div class="bag-progress-grid">
-                    @foreach($bagDeliveryProgress as $bagProgress)
-                        <div class="bag-progress-card">
-                            <div class="topline">
-                                <div>
-                                    <div class="bag-name">{{ $bagProgress['bag_number'] }}</div>
-                                    <div class="bag-meta">{{ $bagProgress['manifest_number'] ?? 'Sin CN31' }} | Estado: {{ $bagProgress['status'] }}</div>
-                                </div>
-                                <div class="bag-ratio">{{ $bagProgress['delivered'] }} / {{ $bagProgress['declared'] }}</div>
-                            </div>
-                            <div class="bag-message">{{ $bagProgress['message'] }}</div>
-                            <div class="progress-bar-shell" style="margin-bottom: .55rem;">
-                                <div class="progress-bar-fill" style="width: {{ $bagProgress['pct'] }}%;"></div>
-                            </div>
-                            <div class="bag-footer">
-                                <span>{{ $bagProgress['pct'] }}% entregado</span>
-                                <span>{{ $bagProgress['pending'] }} pendientes</span>
-                            </div>
+                <form method="POST" action="{{ route('admin.companies.settings', $company) }}">
+                    @csrf
+                    @method('PATCH')
+                    <div class="modal-body">
+                        <div class="form-group">
+                            <label for="companyLocale">Idioma</label>
+                            <select id="companyLocale" name="locale" class="ops-select">
+                                <option value="es" @selected($company->locale === 'es')>Espanol</option>
+                                <option value="en" @selected($company->locale === 'en')>English</option>
+                            </select>
                         </div>
-                    @endforeach
-                </div>
-            @endif
-        </div>
-
-        <div class="row">
-            <div class="col-md-4">
-                <x-adminlte-card title="Ficha de empresa" theme="light" icon="fas fa-id-card" class="panel-card">
-                    <div class="stat-pair mb-3">
-                        <div class="stat-box">
-                            <span class="label">Estado</span>
-                            <span class="value">{{ $company->status === 'active' ? 'Activa' : 'Inactiva' }}</span>
-                        </div>
-                        <div class="stat-box">
-                            <span class="label">Idioma</span>
-                            <span class="value">{{ strtoupper($company->locale ?? 'es') }}</span>
+                        <div class="form-group mb-0">
+                            <label for="companyStatus">Estado</label>
+                            <select id="companyStatus" name="status" class="ops-select">
+                                <option value="active" @selected($company->status === 'active')>Activa</option>
+                                <option value="inactive" @selected($company->status === 'inactive')>Inactiva</option>
+                            </select>
                         </div>
                     </div>
-
-                    <div class="section-note mb-3">
-                        <strong>Slug:</strong> {{ $company->slug }}<br>
-                        <strong>API Key:</strong> <code>{{ $company->api_key }}</code><br>
-                        <strong>Entorno:</strong> {{ $company->environment ?? 'sandbox' }}
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-light" data-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-primary">Guardar cambios</button>
                     </div>
-
-                    <div class="section-note mb-3">
-                        <strong>Contacto:</strong> {{ $company->contact_name ?: 'Sin dato' }}<br>
-                        <strong>Email:</strong> {{ $company->contact_email ?: 'Sin dato' }}<br>
-                        <strong>Telefono:</strong> {{ $company->contact_phone ?: 'Sin dato' }}
-                    </div>
-
-                    <div class="section-note mb-3">
-                        <strong>Usuario portal:</strong> {{ $company->user?->email ?? 'Sin usuario' }}<br>
-                        <strong>Ultimo ingreso:</strong> {{ $company->user?->last_login_at?->format('Y-m-d H:i') ?? 'Sin ingresos' }}<br>
-                        <strong>Sesiones activas:</strong> {{ $sessionCount }}
-                    </div>
-
-                    <div class="section-note">
-                        <strong>Tokens activos:</strong> {{ $summary['active_tokens'] }} de {{ $summary['tokens'] }}
-                    </div>
-                </x-adminlte-card>
-
-                <x-adminlte-card title="Tokens emitidos" theme="light" icon="fas fa-key" class="panel-card">
-                    <div class="table-responsive">
-                        <table class="table corp-table">
-                            <thead>
-                                <tr>
-                                    <th>Nombre</th>
-                                    <th>Estado</th>
-                                    <th>Uso</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($company->apiTokens as $token)
-                                    <tr>
-                                        <td>
-                                            <strong>{{ $token->name }}</strong><br>
-                                            <small class="text-muted">{{ $token->expires_at?->format('Y-m-d H:i') }}</small>
-                                        </td>
-                                        <td>
-                                            @if ($token->revoked_at)
-                                                <span class="badge badge-secondary">Revocado</span>
-                                            @elseif ($token->isExpired())
-                                                <span class="badge badge-danger">Expirado</span>
-                                            @elseif (! $token->hasStarted())
-                                                <span class="badge badge-info">Programado</span>
-                                            @else
-                                                <span class="badge badge-success">Activo</span>
-                                            @endif
-                                        </td>
-                                        <td>{{ $token->last_used_at?->format('Y-m-d H:i') ?? 'Sin uso' }}</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="3" class="text-muted">No hay tokens emitidos para esta empresa.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </x-adminlte-card>
-            </div>
-
-            <div class="col-md-8">
-                <x-adminlte-card title="Ultimos manifiestos CN31" theme="light" icon="fas fa-file-alt" class="panel-card">
-                    <div class="table-responsive">
-                        <table class="table corp-table">
-                            <thead>
-                                <tr>
-                                    <th>CN31</th>
-                                    <th>Ruta</th>
-                                    <th>Totales</th>
-                                    <th>Estado</th>
-                                    <th>Explorar</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($recentManifests as $manifest)
-                                    <tr class="interactive-row" onclick="openManifestModal({{ $manifest->id }})">
-                                        <td>
-                                            <strong>{{ $manifest->cn31_number }}</strong><br>
-                                            <small class="text-muted">{{ $manifest->dispatch_date?->format('Y-m-d H:i') }}</small>
-                                            @if(($manifest->meta['delivered_at'] ?? null))
-                                                <br><small class="text-success">Entregado: {{ $manifest->meta['delivered_at'] }}</small>
-                                            @endif
-                                        </td>
-                                        <td>{{ $manifest->origin_office }} -> {{ $manifest->destination_office }}</td>
-                                        <td>{{ $manifest->total_bags }} sacas / {{ $manifest->total_packages }} paquetes</td>
-                                        <td><span class="detail-chip">{{ $manifest->status }}</span></td>
-                                        <td>
-                                            <button type="button" class="interactive-trigger" onclick="event.stopPropagation(); openManifestModal({{ $manifest->id }})">
-                                                <i class="fas fa-layer-group"></i> Ver sacas
-                                            </button>
-                                        </td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="5" class="text-muted">Todavia no hay manifiestos registrados.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </x-adminlte-card>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <x-adminlte-card title="Ultimas sacas" theme="light" icon="fas fa-shopping-bag" class="panel-card">
-                            <div class="table-responsive">
-                                <table class="table corp-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Saca</th>
-                                            <th>Manifesto</th>
-                                            <th>Estado</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse ($recentBags as $bag)
-                                            <tr>
-                                                <td>
-                                                    <strong>{{ $bag->bag_number }}</strong><br>
-                                                    <small class="text-muted">{{ $bag->declared_package_count }} paquetes</small>
-                                                    @if(($bag->meta['delivered_at'] ?? null))
-                                                        <br><small class="text-success">Entregado: {{ $bag->meta['delivered_at'] }}</small>
-                                                    @endif
-                                                </td>
-                                                <td>{{ $bag->manifest?->cn31_number ?? 'Sin manifiesto' }}</td>
-                                                <td><span class="detail-chip">{{ $bag->status }}</span></td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="3" class="text-muted">Todavia no hay sacas registradas.</td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </x-adminlte-card>
-                    </div>
-
-                    <div class="col-md-6">
-                        <x-adminlte-card title="Ultimos items CN33" theme="light" icon="fas fa-boxes" class="panel-card">
-                            <div class="table-responsive">
-                                <table class="table corp-table">
-                                    <thead>
-                                        <tr>
-                                            <th>Tracking</th>
-                                            <th>Saca</th>
-                                            <th>Estado</th>
-                                        </tr>
-                                    </thead>
-                                    <tbody>
-                                        @forelse ($recentCn33Packages as $cn33)
-                                            <tr>
-                                                <td>
-                                                    <strong>{{ $cn33->tracking_code }}</strong><br>
-                                                    <small class="text-muted">{{ $cn33->recipient_name }}</small>
-                                                    @if(($cn33->meta['delivered_at'] ?? null))
-                                                        <br><small class="text-success">Entregado: {{ $cn33->meta['delivered_at'] }}</small>
-                                                    @endif
-                                                </td>
-                                                <td>{{ $cn33->bag?->bag_number ?? 'Sin saca' }}</td>
-                                                <td><span class="detail-chip">{{ $cn33->status }}</span></td>
-                                            </tr>
-                                        @empty
-                                            <tr>
-                                                <td colspan="3" class="text-muted">Todavia no hay items CN33 registrados.</td>
-                                            </tr>
-                                        @endforelse
-                                    </tbody>
-                                </table>
-                            </div>
-                        </x-adminlte-card>
-                    </div>
-                </div>
-
-                <x-adminlte-card title="Paquetes recientes" theme="light" icon="fas fa-box" class="panel-card">
-                    <div class="table-responsive">
-                        <table class="table corp-table">
-                            <thead>
-                                <tr>
-                                    <th>Tracking</th>
-                                    <th>Destinatario</th>
-                                    <th>Destino</th>
-                                    <th>Estado</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($recentPackages as $package)
-                                    <tr>
-                                        <td>
-                                            <strong>{{ $package->tracking_code }}</strong><br>
-                                            <small class="text-muted">{{ $package->reference ?: 'Sin referencia' }}</small>
-                                            @if(($package->meta['delivered_at'] ?? null))
-                                                <br><small class="text-success">Entregado: {{ $package->meta['delivered_at'] }}</small>
-                                            @endif
-                                        </td>
-                                        <td>{{ $package->recipient_name }}</td>
-                                        <td>{{ $package->destination ?: ($package->recipient_city ?: 'Sin destino') }}</td>
-                                        <td><span class="detail-chip">{{ $package->status }}</span></td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="4" class="text-muted">Todavia no hay paquetes registrados.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </x-adminlte-card>
-
-                <x-adminlte-card title="Movimientos recientes" theme="light" icon="fas fa-route" class="panel-card">
-                    <div class="table-responsive">
-                        <table class="table corp-table">
-                            <thead>
-                                <tr>
-                                    <th>Tracking</th>
-                                    <th>Estado</th>
-                                    <th>Ubicacion</th>
-                                    <th>Fecha</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @forelse ($recentMovements as $movement)
-                                    <tr>
-                                        <td>{{ $movement->package?->tracking_code ?? 'Sin paquete' }}</td>
-                                        <td><span class="detail-chip">{{ $movement->status }}</span></td>
-                                        <td>{{ $movement->location ?: 'Sin ubicacion' }}</td>
-                                        <td>{{ $movement->occurred_at?->format('Y-m-d H:i') ?? 'Sin fecha' }}</td>
-                                    </tr>
-                                @empty
-                                    <tr>
-                                        <td colspan="4" class="text-muted">Todavia no hay movimientos registrados.</td>
-                                    </tr>
-                                @endforelse
-                            </tbody>
-                        </table>
-                    </div>
-                </x-adminlte-card>
+                </form>
             </div>
         </div>
     </div>
 
-    <div class="modal fade" id="manifestExplorerModal" tabindex="-1" role="dialog" aria-hidden="true">
+    <div class="modal fade" id="integrationSearchModal" tabindex="-1" role="dialog" aria-hidden="true">
         <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="manifestExplorerTitle">Sacas del CN31</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
+                    <h5 class="modal-title" id="integrationSearchModalTitle">Detalle de integracion</h5>
+                    <button type="button" class="close" data-dismiss="modal" aria-label="Close"><span aria-hidden="true">&times;</span></button>
                 </div>
-                <div class="modal-body" id="manifestExplorerBody"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="bagExplorerModal" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="bagExplorerTitle">Paquetes de la saca</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body" id="bagExplorerBody"></div>
-            </div>
-        </div>
-    </div>
-
-    <div class="modal fade" id="packageExplorerModal" tabindex="-1" role="dialog" aria-hidden="true">
-        <div class="modal-dialog modal-xl modal-dialog-scrollable" role="document">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="packageExplorerTitle">Detalle del paquete</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Close">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-                <div class="modal-body" id="packageExplorerBody"></div>
+                <div class="modal-body" id="integrationSearchModalBody"></div>
             </div>
         </div>
     </div>
@@ -770,218 +216,128 @@
 
 @section('js')
     <script>
-        const manifestExplorerData = @json($manifestExplorer);
+        const explorerData = @json($explorerData);
+        let selectedManifestId = explorerData[0]?.id || null;
+        let selectedBagId = explorerData[0]?.bags?.[0]?.id || null;
+        let selectedPackageId = explorerData[0]?.bags?.[0]?.packages?.[0]?.id || null;
 
-        function escapeHtml(value) {
-            if (value === null || value === undefined || value === '') {
-                return 'Sin dato';
-            }
+        function escapeHtml(value) { if (value === null || value === undefined || value === '') return 'Sin dato'; return String(value).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#039;'); }
+        function statusClass(status) { return `status-${String(status || 'sin_dato').toLowerCase().replace(/\s+/g, '_')}`; }
+        function statusBadge(status) { return `<span class="status-pill ${statusClass(status)}">${escapeHtml(status)}</span>`; }
+        function findManifest(id) { return explorerData.find(item => item.id === id) || null; }
+        function findBag(manifestId, bagId) { const manifest = findManifest(manifestId); return manifest ? (manifest.bags || []).find(item => item.id === bagId) || null : null; }
+        function findPackage(manifestId, bagId, packageId) { const bag = findBag(manifestId, bagId); return bag ? (bag.packages || []).find(item => item.id === packageId) || null : null; }
+        function selectManifest(id) { selectedManifestId = id; const manifest = findManifest(id); selectedBagId = manifest?.bags?.[0]?.id || null; selectedPackageId = manifest?.bags?.[0]?.packages?.[0]?.id || null; renderExplorer(); }
+        function selectBag(id) { selectedBagId = id; const bag = findBag(selectedManifestId, id); selectedPackageId = bag?.packages?.[0]?.id || null; renderExplorer(); }
+        function selectPackage(id) { selectedPackageId = id; renderPackageDetail(); }
 
-            return String(value)
-                .replace(/&/g, '&amp;')
-                .replace(/</g, '&lt;')
-                .replace(/>/g, '&gt;')
-                .replace(/"/g, '&quot;')
-                .replace(/'/g, '&#039;');
+        function renderManifestList() {
+            const host = document.getElementById('manifestListHost');
+            if (!explorerData.length) { host.innerHTML = '<div class="ops-empty">Todavia no hay CN31 cargados para esta empresa.</div>'; return; }
+            host.innerHTML = explorerData.map(manifest => `
+                <button type="button" class="ops-list-card ${manifest.id === selectedManifestId ? 'active' : ''}" onclick="selectManifest(${manifest.id})">
+                    <div class="ops-list-top"><div><span class="ops-list-title">${escapeHtml(manifest.cn31_number)}</span><span class="ops-list-meta">${escapeHtml(manifest.origin_office)} -> ${escapeHtml(manifest.destination_office)}</span></div>${statusBadge(manifest.status)}</div>
+                    <span class="ops-list-meta">${escapeHtml(manifest.dispatch_date)} | ${escapeHtml(manifest.total_bags)} sacas | ${escapeHtml(manifest.total_packages)} paquetes</span>
+                </button>
+            `).join('');
         }
 
-        function badge(status) {
-            return `<span class="detail-chip">${escapeHtml(status)}</span>`;
+        function renderBagList() {
+            const host = document.getElementById('bagListHost');
+            const manifest = findManifest(selectedManifestId);
+            if (!manifest || !(manifest.bags || []).length) { host.innerHTML = '<div class="ops-empty">Este CN31 aun no tiene sacas cargadas.</div>'; return; }
+            host.innerHTML = manifest.bags.map(bag => `
+                <button type="button" class="ops-list-card ${bag.id === selectedBagId ? 'active' : ''}" onclick="selectBag(${bag.id})">
+                    <div class="ops-list-top"><div><span class="ops-list-title">${escapeHtml(bag.dispatch_number_bag || bag.bag_number)}</span><span class="ops-list-meta">${escapeHtml(bag.bag_number)}</span></div>${statusBadge(bag.status)}</div>
+                    <span class="ops-list-meta">${escapeHtml(bag.loaded_package_count)} cargados / ${escapeHtml(bag.declared_package_count)} declarados</span>
+                    <span class="ops-list-meta">${escapeHtml(bag.loaded_weight_kg)} kg / ${escapeHtml(bag.declared_weight_kg)} kg</span>
+                </button>
+            `).join('');
         }
 
-        function findManifest(manifestId) {
-            return manifestExplorerData.find((item) => item.id === manifestId);
+        function renderPackageList() {
+            const host = document.getElementById('packageListHost');
+            const bag = findBag(selectedManifestId, selectedBagId);
+            if (!bag || !(bag.packages || []).length) { host.innerHTML = '<div class="ops-empty">Esta saca aun no tiene paquetes visibles.</div>'; return; }
+            host.innerHTML = bag.packages.map(pkg => `
+                <button type="button" class="ops-list-card ${pkg.id === selectedPackageId ? 'active' : ''}" onclick="selectPackage(${pkg.id})">
+                    <div class="ops-list-top"><div><span class="ops-list-title">${escapeHtml(pkg.tracking_code)}</span><span class="ops-list-meta">${escapeHtml(pkg.origin)} -> ${escapeHtml(pkg.destination)}</span></div>${statusBadge(pkg.package_detail?.status || pkg.status)}</div>
+                    <span class="ops-list-meta">${escapeHtml(pkg.weight_kg)} kg</span>
+                </button>
+            `).join('');
         }
 
-        function findBag(manifestId, bagId) {
-            const manifest = findManifest(manifestId);
-            return manifest ? manifest.bags.find((bag) => bag.id === bagId) : null;
-        }
-
-        function findPackage(manifestId, bagId, packageId) {
-            const bag = findBag(manifestId, bagId);
-            return bag ? bag.packages.find((item) => item.id === packageId) : null;
-        }
-
-        function openManifestModal(manifestId) {
-            const manifest = findManifest(manifestId);
-
-            if (!manifest) {
-                return;
-            }
-
-            document.getElementById('manifestExplorerTitle').textContent = `Sacas del ${manifest.cn31_number}`;
-
-            const body = `
-                <div class="modal-panel">
-                    <div class="detail-grid">
-                        <div class="item"><span class="label">Ruta</span><span class="value">${escapeHtml(manifest.origin_office)} -> ${escapeHtml(manifest.destination_office)}</span></div>
-                        <div class="item"><span class="label">Despacho</span><span class="value">${escapeHtml(manifest.dispatch_date)}</span></div>
-                        <div class="item"><span class="label">Totales</span><span class="value">${escapeHtml(manifest.total_bags)} sacas / ${escapeHtml(manifest.total_packages)} paquetes</span></div>
-                        <div class="item"><span class="label">Peso total</span><span class="value">${escapeHtml(manifest.total_weight_kg)} kg</span></div>
-                        <div class="item"><span class="label">Entregado</span><span class="value">${escapeHtml(manifest.delivered_at)}</span></div>
-                    </div>
-                </div>
-                <div class="table-responsive">
-                    <table class="table corp-table modal-table">
-                        <thead>
-                            <tr>
-                                <th>Saca</th>
-                                <th>Cantidades</th>
-                                <th>Peso</th>
-                                <th>Estado</th>
-                                <th>Accion</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${manifest.bags.length ? manifest.bags.map((bag) => `
-                                <tr>
-                                    <td><strong>${escapeHtml(bag.bag_number)}</strong></td>
-                                    <td>${escapeHtml(bag.loaded_package_count)} cargados / ${escapeHtml(bag.declared_package_count)} declarados</td>
-                                    <td>${escapeHtml(bag.loaded_weight_kg)} kg / ${escapeHtml(bag.declared_weight_kg)} kg</td>
-                                    <td>${badge(bag.status)}</td>
-                                    <td>
-                                        <button type="button" class="interactive-trigger" onclick="openBagModal(${manifest.id}, ${bag.id})">
-                                            <i class="fas fa-boxes"></i> Ver paquetes
-                                        </button>
-                                    </td>
-                                </tr>
-                            `).join('') : '<tr><td colspan="5" class="text-muted">No hay sacas para este CN31.</td></tr>'}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-
-            document.getElementById('manifestExplorerBody').innerHTML = body;
-            $('#manifestExplorerModal').modal('show');
-        }
-
-        function openBagModal(manifestId, bagId) {
-            const manifest = findManifest(manifestId);
-            const bag = findBag(manifestId, bagId);
-
-            if (!manifest || !bag) {
-                return;
-            }
-
-            document.getElementById('bagExplorerTitle').textContent = `Paquetes de ${bag.bag_number}`;
-
-            const body = `
-                <div class="modal-panel">
-                    <div class="detail-grid">
-                        <div class="item"><span class="label">CN31</span><span class="value">${escapeHtml(manifest.cn31_number)}</span></div>
-                        <div class="item"><span class="label">Estado saca</span><span class="value">${escapeHtml(bag.status)}</span></div>
-                        <div class="item"><span class="label">Entregado</span><span class="value">${escapeHtml(bag.delivered_at)}</span></div>
-                        <div class="item"><span class="label">Paquetes</span><span class="value">${escapeHtml(bag.loaded_package_count)} cargados / ${escapeHtml(bag.declared_package_count)} declarados</span></div>
-                        <div class="item"><span class="label">Peso</span><span class="value">${escapeHtml(bag.loaded_weight_kg)} kg / ${escapeHtml(bag.declared_weight_kg)} kg</span></div>
-                    </div>
-                </div>
-                <div class="table-responsive">
-                    <table class="table corp-table modal-table">
-                        <thead>
-                            <tr>
-                                <th>Tracking</th>
-                                <th>Destinatario</th>
-                                <th>Destino</th>
-                                <th>Estado</th>
-                                <th>Accion</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            ${bag.packages.length ? bag.packages.map((pkg) => `
-                                <tr>
-                                    <td><strong>${escapeHtml(pkg.tracking_code)}</strong><br><small class="text-muted">${escapeHtml(pkg.reference)}</small></td>
-                                    <td>${escapeHtml(pkg.recipient_name)}</td>
-                                    <td>${escapeHtml(pkg.destination)}</td>
-                                    <td>${badge(pkg.status)}</td>
-                                    <td>
-                                        <button type="button" class="interactive-trigger" onclick="openPackageModal(${manifest.id}, ${bag.id}, ${pkg.id})">
-                                            <i class="fas fa-search"></i> Ver detalle
-                                        </button>
-                                    </td>
-                                </tr>
-                            `).join('') : '<tr><td colspan="5" class="text-muted">No hay paquetes para esta saca.</td></tr>'}
-                        </tbody>
-                    </table>
-                </div>
-            `;
-
-            document.getElementById('bagExplorerBody').innerHTML = body;
-            $('#bagExplorerModal').modal('show');
-        }
-
-        function openPackageModal(manifestId, bagId, packageId) {
-            const pkg = findPackage(manifestId, bagId, packageId);
-
-            if (!pkg) {
-                return;
-            }
-
-            const detail = pkg.package_detail;
-            document.getElementById('packageExplorerTitle').textContent = `Detalle de ${pkg.tracking_code}`;
-
+        function renderPackageDetail() {
+            const host = document.getElementById('packageDetailHost');
+            const pkg = findPackage(selectedManifestId, selectedBagId, selectedPackageId);
+            const detail = pkg?.package_detail || null;
+            if (!pkg) { host.innerHTML = '<div class="ops-empty">Selecciona un tracking para revisar su detalle.</div>'; return; }
             if (!detail) {
-                document.getElementById('packageExplorerBody').innerHTML = `
-                    <div class="section-note">Este tracking existe en CN33, pero todavia no tiene detalle completo de paquete.</div>
-                `;
-                $('#packageExplorerModal').modal('show');
+                host.innerHTML = `<div class="ops-summary-grid"><div class="ops-summary"><span class="ops-label">Tracking</span><strong>${escapeHtml(pkg.tracking_code)}</strong></div><div class="ops-summary"><span class="ops-label">Estado CN33</span><strong>${escapeHtml(pkg.status)}</strong></div><div class="ops-summary"><span class="ops-label">Ruta</span><strong>${escapeHtml(pkg.origin)} -> ${escapeHtml(pkg.destination)}</strong></div><div class="ops-summary"><span class="ops-label">Peso</span><strong>${escapeHtml(pkg.weight_kg)} kg</strong></div></div><div class="ops-empty">Este tracking existe en CN33, pero todavia no tiene detalle CN22 cargado.</div>`;
                 return;
             }
-
-            const movements = detail.movements.length
-                ? detail.movements.map((movement) => `
-                    <tr>
-                        <td>${escapeHtml(movement.status)}</td>
-                        <td>${escapeHtml(movement.location)}</td>
-                        <td>${escapeHtml(movement.description)}</td>
-                        <td>${escapeHtml(movement.occurred_at)}</td>
-                    </tr>
-                `).join('')
-                : '<tr><td colspan="4" class="text-muted">No hay movimientos registrados para este paquete.</td></tr>';
-
-            document.getElementById('packageExplorerBody').innerHTML = `
-                <div class="modal-panel">
-                    <div class="detail-grid">
-                        <div class="item"><span class="label">Tracking</span><span class="value">${escapeHtml(detail.tracking_code)}</span></div>
-                        <div class="item"><span class="label">Estado</span><span class="value">${escapeHtml(detail.status)}</span></div>
-                        <div class="item"><span class="label">Entregado</span><span class="value">${escapeHtml(detail.delivered_at)}</span></div>
-                        <div class="item"><span class="label">Referencia</span><span class="value">${escapeHtml(detail.reference)}</span></div>
-                        <div class="item"><span class="label">Fecha envio</span><span class="value">${escapeHtml(detail.shipment_date)}</span></div>
-                        <div class="item"><span class="label">Remitente</span><span class="value">${escapeHtml(detail.sender_name)} (${escapeHtml(detail.sender_country)})</span></div>
-                        <div class="item"><span class="label">Destinatario</span><span class="value">${escapeHtml(detail.recipient_name)} / ${escapeHtml(detail.recipient_document)}</span></div>
-                        <div class="item"><span class="label">Contacto</span><span class="value">${escapeHtml(detail.recipient_phone)} / ${escapeHtml(detail.recipient_whatsapp)}</span></div>
-                        <div class="item"><span class="label">Ruta</span><span class="value">${escapeHtml(detail.origin_office)} -> ${escapeHtml(detail.destination_office)}</span></div>
-                        <div class="item"><span class="label">Direccion</span><span class="value">${escapeHtml(detail.recipient_address)}</span></div>
-                        <div class="item"><span class="label">Referencia direccion</span><span class="value">${escapeHtml(detail.recipient_address_reference)}</span></div>
-                        <div class="item"><span class="label">Ciudad / Departamento</span><span class="value">${escapeHtml(detail.recipient_city)} / ${escapeHtml(detail.recipient_department)}</span></div>
-                        <div class="item"><span class="label">Descripcion</span><span class="value">${escapeHtml(detail.description)}</span></div>
-                        <div class="item"><span class="label">Peso</span><span class="value">${escapeHtml(detail.gross_weight_grams)} gr / ${escapeHtml(detail.weight_kg)} kg</span></div>
-                        <div class="item"><span class="label">Dimensiones</span><span class="value">${escapeHtml(detail.dimensions)}</span></div>
-                        <div class="item"><span class="label">Valor FOB</span><span class="value">USD ${escapeHtml(detail.value_fob_usd)}</span></div>
-                        <div class="item"><span class="label">Registrado</span><span class="value">${escapeHtml(detail.registered_at)}</span></div>
-                    </div>
-                </div>
-                <h6 class="mb-3">Historial de movimientos</h6>
-                <div class="table-responsive">
-                    <table class="table corp-table modal-table">
-                        <thead>
-                            <tr>
-                                <th>Estado</th>
-                                <th>Ubicacion</th>
-                                <th>Descripcion</th>
-                                <th>Fecha</th>
-                            </tr>
-                        </thead>
-                        <tbody>${movements}</tbody>
-                    </table>
-                </div>
-            `;
-
-            $('#packageExplorerModal').modal('show');
+            const movements = (detail.movements || []).length ? detail.movements.map(movement => `<tr><td>${statusBadge(movement.status)}</td><td>${escapeHtml(movement.location)}</td><td>${escapeHtml(movement.description)}</td></tr>`).join('') : '<tr><td colspan="3" class="text-muted">Todavia no hay movimientos para este paquete.</td></tr>';
+            host.innerHTML = `<div class="ops-summary-grid"><div class="ops-summary"><span class="ops-label">Tracking</span><strong>${escapeHtml(detail.tracking_code)}</strong></div><div class="ops-summary"><span class="ops-label">Estado</span><strong>${statusBadge(detail.status)}</strong></div><div class="ops-summary"><span class="ops-label">Ruta</span><strong>${escapeHtml(detail.origin_office)} -> ${escapeHtml(detail.destination_office)}</strong></div><div class="ops-summary"><span class="ops-label">Peso</span><strong>${escapeHtml(detail.gross_weight_grams)} gr / ${escapeHtml(detail.weight_kg)} kg</strong></div></div><div class="ops-person-grid"><section class="ops-person"><div class="ops-person-head"><span class="ops-person-title">Remitente</span><i class="fas fa-paper-plane text-primary"></i></div><div class="ops-person-body"><div><div class="ops-person-name">${escapeHtml(detail.sender_name)}</div><div class="ops-note">${escapeHtml(detail.sender_country)}</div></div><div class="ops-item"><span class="ops-label">Direccion</span><span class="ops-item-value">${escapeHtml(detail.sender_address)}</span></div><div class="ops-item"><span class="ops-label">Telefono</span><span class="ops-item-value">${escapeHtml(detail.sender_phone)}</span></div></div></section><section class="ops-person"><div class="ops-person-head"><span class="ops-person-title">Destinatario</span><i class="fas fa-user text-primary"></i></div><div class="ops-person-body"><div><div class="ops-person-name">${escapeHtml(detail.recipient_name)}</div><div class="ops-note">Documento: ${escapeHtml(detail.recipient_document)}</div></div><div class="ops-mini-grid"><div class="ops-item"><span class="ops-label">Contacto</span><span class="ops-item-value">${escapeHtml(detail.recipient_phone)} / ${escapeHtml(detail.recipient_whatsapp)}</span></div><div class="ops-item"><span class="ops-label">Direccion</span><span class="ops-item-value">${escapeHtml(detail.recipient_address)}</span></div><div class="ops-item"><span class="ops-label">Referencia</span><span class="ops-item-value">${escapeHtml(detail.recipient_address_reference)}</span></div><div class="ops-item"><span class="ops-label">Ciudad / Departamento</span><span class="ops-item-value">${escapeHtml(detail.recipient_city)} / ${escapeHtml(detail.recipient_department)}</span></div></div></div></section></div><div class="ops-mini-grid" style="margin-top:.9rem;"><div class="ops-item"><span class="ops-label">Descripcion</span><span class="ops-item-value">${escapeHtml(detail.description)}</span></div><div class="ops-item"><span class="ops-label">Valor FOB</span><span class="ops-item-value">${detail.value_fob_usd !== null ? `USD ${escapeHtml(detail.value_fob_usd)}` : 'Sin dato'}</span></div><div class="ops-item"><span class="ops-label">Recibido en sistema</span><span class="ops-item-value">${escapeHtml(detail.registered_at)}</span></div><div class="ops-item"><span class="ops-label">Ultima actualizacion</span><span class="ops-item-value">${escapeHtml(detail.last_movement_at)}</span></div></div><div class="table-responsive" style="margin-top:1rem;"><table class="table corp-table mb-0"><thead><tr><th>Estado</th><th>Ubicacion</th><th>Descripcion</th></tr></thead><tbody>${movements}</tbody></table></div>`;
         }
+
+        function renderExplorer() { renderManifestList(); renderBagList(); renderPackageList(); renderPackageDetail(); }
+
+        function openSearchModal(title, body) {
+            document.getElementById('integrationSearchModalTitle').textContent = title;
+            document.getElementById('integrationSearchModalBody').innerHTML = body;
+            $('#integrationSearchModal').modal('show');
+        }
+
+        function openManifestSearchModal(manifest) {
+            const body = `<div class="ops-summary-grid"><div class="ops-summary"><span class="ops-label">CN31</span><strong>${escapeHtml(manifest.cn31_number)}</strong></div><div class="ops-summary"><span class="ops-label">Ruta</span><strong>${escapeHtml(manifest.origin_office)} -> ${escapeHtml(manifest.destination_office)}</strong></div><div class="ops-summary"><span class="ops-label">Despacho</span><strong>${escapeHtml(manifest.dispatch_date)}</strong></div><div class="ops-summary"><span class="ops-label">Estado</span><strong>${statusBadge(manifest.status)}</strong></div></div><div class="table-responsive"><table class="table corp-table mb-0"><thead><tr><th>Saca</th><th>Paquetes</th><th>Peso</th><th>Estado</th></tr></thead><tbody>${(manifest.bags || []).length ? manifest.bags.map(bag => `<tr><td><strong>${escapeHtml(bag.dispatch_number_bag || bag.bag_number)}</strong><br><small class="text-muted">${escapeHtml(bag.bag_number)}</small></td><td>${escapeHtml(bag.loaded_package_count)} / ${escapeHtml(bag.declared_package_count)}</td><td>${escapeHtml(bag.loaded_weight_kg)} kg / ${escapeHtml(bag.declared_weight_kg)} kg</td><td>${statusBadge(bag.status)}</td></tr>`).join('') : '<tr><td colspan="4" class="text-muted">No hay sacas para este CN31.</td></tr>'}</tbody></table></div>`;
+            openSearchModal(`CN31 ${manifest.cn31_number}`, body);
+        }
+
+        function openBagSearchModal(manifest, bag) {
+            const body = `<div class="ops-summary-grid"><div class="ops-summary"><span class="ops-label">CN31</span><strong>${escapeHtml(manifest.cn31_number)}</strong></div><div class="ops-summary"><span class="ops-label">Saca</span><strong>${escapeHtml(bag.dispatch_number_bag || bag.bag_number)}</strong></div><div class="ops-summary"><span class="ops-label">Estado</span><strong>${statusBadge(bag.status)}</strong></div><div class="ops-summary"><span class="ops-label">Peso</span><strong>${escapeHtml(bag.loaded_weight_kg)} kg / ${escapeHtml(bag.declared_weight_kg)} kg</strong></div></div><div class="table-responsive"><table class="table corp-table mb-0"><thead><tr><th>Tracking</th><th>Ruta</th><th>Peso</th><th>Estado</th></tr></thead><tbody>${(bag.packages || []).length ? bag.packages.map(pkg => `<tr><td><strong>${escapeHtml(pkg.tracking_code)}</strong></td><td>${escapeHtml(pkg.origin)} -> ${escapeHtml(pkg.destination)}</td><td>${escapeHtml(pkg.weight_kg)} kg</td><td>${statusBadge(pkg.package_detail?.status || pkg.status)}</td></tr>`).join('') : '<tr><td colspan="4" class="text-muted">No hay paquetes para esta saca.</td></tr>'}</tbody></table></div>`;
+            openSearchModal(`Saca ${bag.dispatch_number_bag || bag.bag_number}`, body);
+        }
+
+        function openPackageSearchModal(pkg) {
+            const detail = pkg.package_detail || null;
+            if (!detail) {
+                const body = `<div class="ops-summary-grid"><div class="ops-summary"><span class="ops-label">Tracking</span><strong>${escapeHtml(pkg.tracking_code)}</strong></div><div class="ops-summary"><span class="ops-label">Ruta</span><strong>${escapeHtml(pkg.origin)} -> ${escapeHtml(pkg.destination)}</strong></div><div class="ops-summary"><span class="ops-label">Peso</span><strong>${escapeHtml(pkg.weight_kg)} kg</strong></div><div class="ops-summary"><span class="ops-label">Estado</span><strong>${statusBadge(pkg.status)}</strong></div></div><div class="ops-empty">Este tracking existe en CN33, pero todavia no tiene detalle CN22.</div>`;
+                openSearchModal(`Tracking ${pkg.tracking_code}`, body);
+                return;
+            }
+            const body = `<div class="ops-summary-grid"><div class="ops-summary"><span class="ops-label">Tracking</span><strong>${escapeHtml(detail.tracking_code)}</strong></div><div class="ops-summary"><span class="ops-label">Estado</span><strong>${statusBadge(detail.status)}</strong></div><div class="ops-summary"><span class="ops-label">Ruta</span><strong>${escapeHtml(detail.origin_office)} -> ${escapeHtml(detail.destination_office)}</strong></div><div class="ops-summary"><span class="ops-label">Peso</span><strong>${escapeHtml(detail.gross_weight_grams)} gr / ${escapeHtml(detail.weight_kg)} kg</strong></div></div><div class="ops-person-grid"><section class="ops-person"><div class="ops-person-head"><span class="ops-person-title">Remitente</span><i class="fas fa-paper-plane text-primary"></i></div><div class="ops-person-body"><div><div class="ops-person-name">${escapeHtml(detail.sender_name)}</div><div class="ops-note">${escapeHtml(detail.sender_country)}</div></div><div class="ops-item"><span class="ops-label">Direccion</span><span class="ops-item-value">${escapeHtml(detail.sender_address)}</span></div><div class="ops-item"><span class="ops-label">Telefono</span><span class="ops-item-value">${escapeHtml(detail.sender_phone)}</span></div></div></section><section class="ops-person"><div class="ops-person-head"><span class="ops-person-title">Destinatario</span><i class="fas fa-user text-primary"></i></div><div class="ops-person-body"><div><div class="ops-person-name">${escapeHtml(detail.recipient_name)}</div><div class="ops-note">Documento: ${escapeHtml(detail.recipient_document)}</div></div><div class="ops-mini-grid"><div class="ops-item"><span class="ops-label">Contacto</span><span class="ops-item-value">${escapeHtml(detail.recipient_phone)} / ${escapeHtml(detail.recipient_whatsapp)}</span></div><div class="ops-item"><span class="ops-label">Direccion</span><span class="ops-item-value">${escapeHtml(detail.recipient_address)}</span></div><div class="ops-item"><span class="ops-label">Referencia</span><span class="ops-item-value">${escapeHtml(detail.recipient_address_reference)}</span></div><div class="ops-item"><span class="ops-label">Ciudad / Departamento</span><span class="ops-item-value">${escapeHtml(detail.recipient_city)} / ${escapeHtml(detail.recipient_department)}</span></div></div></div></section></div>`;
+            openSearchModal(`Tracking ${pkg.tracking_code}`, body);
+        }
+
+        function runIntegrationSearch() {
+            const input = document.getElementById('integrationSearchInput');
+            const result = document.getElementById('integrationSearchResult');
+            const query = String(input.value || '').trim().toUpperCase();
+            result.classList.remove('is-error');
+            if (!query) { result.textContent = 'Escribe un CN31, una saca o un tracking para buscarlo.'; result.classList.add('is-error'); return; }
+            const manifest = explorerData.find(item => String(item.cn31_number || '').toUpperCase().includes(query));
+            if (manifest) { selectedManifestId = manifest.id; selectedBagId = manifest?.bags?.[0]?.id || null; selectedPackageId = manifest?.bags?.[0]?.packages?.[0]?.id || null; renderExplorer(); openManifestSearchModal(manifest); result.textContent = `CN31 ${manifest.cn31_number} encontrado.`; return; }
+            for (const manifestItem of explorerData) {
+                const bag = (manifestItem.bags || []).find(item => String(item.dispatch_number_bag || item.bag_number || '').toUpperCase().includes(query) || String(item.bag_number || '').toUpperCase().includes(query));
+                if (bag) { selectedManifestId = manifestItem.id; selectedBagId = bag.id; selectedPackageId = bag?.packages?.[0]?.id || null; renderExplorer(); openBagSearchModal(manifestItem, bag); result.textContent = `Saca ${bag.dispatch_number_bag || bag.bag_number} encontrada dentro de ${manifestItem.cn31_number}.`; return; }
+            }
+            for (const manifestItem of explorerData) {
+                for (const bag of manifestItem.bags || []) {
+                    const pkg = (bag.packages || []).find(item => String(item.tracking_code || '').toUpperCase().includes(query));
+                    if (pkg) { selectedManifestId = manifestItem.id; selectedBagId = bag.id; selectedPackageId = pkg.id; renderExplorer(); openPackageSearchModal(pkg); result.textContent = `Tracking ${pkg.tracking_code} encontrado en ${bag.dispatch_number_bag || bag.bag_number}.`; return; }
+                }
+            }
+            result.textContent = `No encontramos ${query} dentro de la integracion de esta empresa.`; result.classList.add('is-error');
+        }
+
+        document.addEventListener('DOMContentLoaded', function () {
+            renderExplorer();
+            document.getElementById('integrationSearchButton')?.addEventListener('click', runIntegrationSearch);
+            document.getElementById('integrationSearchInput')?.addEventListener('keydown', function (event) { if (event.key === 'Enter') { event.preventDefault(); runIntegrationSearch(); } });
+        });
     </script>
 @stop
 
 @section('footer')
-    <strong>API Integracion.</strong> Detalle operativo por empresa.
+    <strong>Integracion.</strong> Mesa de control interna por empresa.
 @stop

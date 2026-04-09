@@ -33,6 +33,13 @@ class BulkIntegrationController extends Controller
                     fn ($query) => $query->where('company_id', $company->id)
                 ),
             ],
+            'manifest.dispatch_number_manifest' => [
+                'nullable',
+                'regex:/^[0-9]{10}$/',
+                Rule::unique('cn31_manifests', 'dispatch_number_manifest')->where(
+                    fn ($query) => $query->where('company_id', $company->id)
+                ),
+            ],
             'manifest.origin_office' => ['required', 'string', 'max:150'],
             'manifest.destination_office' => ['required', 'string', 'max:150'],
             'manifest.dispatch_date' => ['required', 'date_format:Y-m-d H:i:s'],
@@ -46,9 +53,16 @@ class BulkIntegrationController extends Controller
                     fn ($query) => $query->where('company_id', $company->id)
                 ),
             ],
+            'manifest.bags.*.dispatch_number_bag' => [
+                'nullable',
+                'regex:/^[0-9]{1,20}$/',
+                'distinct',
+                Rule::unique('cn31_bags', 'dispatch_number_bag')->where(
+                    fn ($query) => $query->where('company_id', $company->id)
+                ),
+            ],
             'manifest.bags.*.package_count' => ['required', 'integer', 'min:1'],
             'manifest.bags.*.total_weight_kg' => ['required', 'numeric', 'gt:0'],
-            'manifest.bags.*.seal_number' => ['nullable', 'string', 'max:100'],
             'manifest.bags.*.dispatch_note' => ['nullable', 'string', 'max:255'],
             'manifest.bags.*.packages' => ['required', 'array', 'min:1'],
             'manifest.bags.*.packages.*.tracking_code' => [
@@ -67,8 +81,7 @@ class BulkIntegrationController extends Controller
                     fn ($query) => $query->where('company_id', $company->id)
                 ),
             ],
-            'manifest.bags.*.packages.*.reference' => ['nullable', 'string', 'max:100'],
-            'manifest.bags.*.packages.*.recipient_name' => ['required', 'string', 'max:255'],
+            'manifest.bags.*.packages.*.origin' => ['required', 'string', 'max:255'],
             'manifest.bags.*.packages.*.destination' => ['required', 'string', 'max:255'],
             'manifest.bags.*.packages.*.weight_kg' => ['required', 'numeric', 'gt:0'],
             'manifest.bags.*.packages.*.notes' => ['nullable', 'string', 'max:255'],
@@ -88,8 +101,8 @@ class BulkIntegrationController extends Controller
             'manifest.bags.*.packages.*.cn22.recipient_phone' => ['required', 'string', 'max:50'],
             'manifest.bags.*.packages.*.cn22.recipient_whatsapp' => ['nullable', 'string', 'max:50'],
             'manifest.bags.*.packages.*.cn22.description' => ['required', 'string', 'max:500'],
-            'manifest.bags.*.packages.*.cn22.shipment_date' => ['required', 'date_format:Y-m-d H:i:s'],
             'manifest.bags.*.packages.*.cn22.gross_weight_grams' => ['required', 'integer', 'min:1'],
+            'manifest.bags.*.packages.*.cn22.weight_kg' => ['nullable', 'numeric', 'gt:0'],
             'manifest.bags.*.packages.*.cn22.length_cm' => ['required', 'numeric', 'gt:0'],
             'manifest.bags.*.packages.*.cn22.width_cm' => ['required', 'numeric', 'gt:0'],
             'manifest.bags.*.packages.*.cn22.height_cm' => ['required', 'numeric', 'gt:0'],
@@ -110,6 +123,11 @@ class BulkIntegrationController extends Controller
             'manifest.bags.*.bag_number.required' => __('api.validation.bag_number_required'),
             'manifest.bags.*.bag_number.distinct' => __('api.validation.bag_number_distinct'),
             'manifest.bags.*.bag_number.unique' => __('api.validation.bag_number_unique'),
+            'manifest.bags.*.dispatch_number_bag.regex' => 'The bag dispatch number must contain only digits.',
+            'manifest.bags.*.dispatch_number_bag.distinct' => 'The bag dispatch number must not be repeated.',
+            'manifest.bags.*.dispatch_number_bag.unique' => 'The bag dispatch number has already been registered.',
+            'manifest.dispatch_number_manifest.regex' => 'The manifest dispatch number must contain exactly 10 digits.',
+            'manifest.dispatch_number_manifest.unique' => 'The manifest dispatch number has already been registered.',
             'manifest.bags.*.package_count.required' => __('api.validation.package_count_required'),
             'manifest.bags.*.package_count.integer' => __('api.validation.package_count_integer'),
             'manifest.bags.*.total_weight_kg.required' => __('api.validation.bag_total_weight_required'),
@@ -118,7 +136,7 @@ class BulkIntegrationController extends Controller
             'manifest.bags.*.packages.required' => __('api.validation.bulk_packages_required'),
             'manifest.bags.*.packages.array' => __('api.validation.packages_array'),
             'manifest.bags.*.packages.*.tracking_code.required' => __('api.validation.cn33_tracking_required'),
-            'manifest.bags.*.packages.*.recipient_name.required' => __('api.validation.cn33_recipient_required'),
+            'manifest.bags.*.packages.*.origin.required' => __('api.validation.origin_office_required'),
             'manifest.bags.*.packages.*.destination.required' => __('api.validation.cn33_destination_required'),
             'manifest.bags.*.packages.*.weight_kg.required' => __('api.validation.cn33_weight_required'),
             'manifest.bags.*.packages.*.weight_kg.numeric' => __('api.validation.cn33_weight_numeric'),
@@ -138,8 +156,6 @@ class BulkIntegrationController extends Controller
             'manifest.bags.*.packages.*.cn22.recipient_department.required' => __('api.validation.recipient_department_required'),
             'manifest.bags.*.packages.*.cn22.recipient_phone.required' => __('api.validation.recipient_phone_required'),
             'manifest.bags.*.packages.*.cn22.description.required' => __('api.validation.description_required'),
-            'manifest.bags.*.packages.*.cn22.shipment_date.required' => __('api.validation.shipment_date_required'),
-            'manifest.bags.*.packages.*.cn22.shipment_date.date_format' => __('api.validation.shipment_date_format'),
             'manifest.bags.*.packages.*.cn22.gross_weight_grams.required' => __('api.validation.gross_weight_required'),
             'manifest.bags.*.packages.*.cn22.gross_weight_grams.integer' => __('api.validation.gross_weight_integer'),
             'manifest.bags.*.packages.*.cn22.gross_weight_grams.min' => __('api.validation.gross_weight_min'),
@@ -150,15 +166,35 @@ class BulkIntegrationController extends Controller
 
         $validator->after(function ($validator) use ($request): void {
             $trackingCodes = [];
+            $totalDeclaredPackages = 0;
+            $totalLoadedPackages = 0;
+            $totalDeclaredWeight = 0.0;
+            $totalLoadedWeight = 0.0;
+            $epsilon = 0.0001;
 
             foreach ((array) data_get($request->all(), 'manifest.bags', []) as $bagIndex => $bag) {
                 $declaredCount = (int) ($bag['package_count'] ?? 0);
                 $loadedCount = count((array) ($bag['packages'] ?? []));
+                $declaredWeight = round((float) ($bag['total_weight_kg'] ?? 0), 3);
+                $loadedWeight = round(collect((array) ($bag['packages'] ?? []))
+                    ->sum(fn ($package) => (float) ($package['weight_kg'] ?? 0)), 3);
+
+                $totalDeclaredPackages += $declaredCount;
+                $totalLoadedPackages += $loadedCount;
+                $totalDeclaredWeight += $declaredWeight;
+                $totalLoadedWeight += $loadedWeight;
 
                 if ($declaredCount > 0 && $loadedCount !== $declaredCount) {
                     $validator->errors()->add(
                         "manifest.bags.$bagIndex.packages",
                         __('api.validation.bulk_bag_package_count_mismatch')
+                    );
+                }
+
+                if (abs($declaredWeight - $loadedWeight) > $epsilon) {
+                    $validator->errors()->add(
+                        "manifest.bags.$bagIndex.total_weight_kg",
+                        __('api.validation.bulk_bag_weight_mismatch')
                     );
                 }
 
@@ -182,7 +218,41 @@ class BulkIntegrationController extends Controller
                             __('api.validation.value_fob_required')
                         );
                     }
+
+                    $cn33Weight = round((float) ($package['weight_kg'] ?? 0), 3);
+                    $cn22Weight = isset($package['cn22']['weight_kg'])
+                        ? round((float) $package['cn22']['weight_kg'], 3)
+                        : round(((int) ($package['cn22']['gross_weight_grams'] ?? 0)) / 1000, 3);
+                    $grossWeightKg = round(((int) ($package['cn22']['gross_weight_grams'] ?? 0)) / 1000, 3);
+
+                    if (abs($cn33Weight - $cn22Weight) > $epsilon) {
+                        $validator->errors()->add(
+                            "manifest.bags.$bagIndex.packages.$packageIndex.cn22.weight_kg",
+                            __('api.validation.bulk_package_weight_mismatch')
+                        );
+                    }
+
+                    if (abs($cn33Weight - $grossWeightKg) > $epsilon) {
+                        $validator->errors()->add(
+                            "manifest.bags.$bagIndex.packages.$packageIndex.cn22.gross_weight_grams",
+                            __('api.validation.bulk_package_gross_weight_mismatch')
+                        );
+                    }
                 }
+            }
+
+            if ($totalDeclaredPackages !== $totalLoadedPackages) {
+                $validator->errors()->add(
+                    'manifest.bags',
+                    __('api.validation.bulk_manifest_package_count_mismatch')
+                );
+            }
+
+            if (abs(round($totalDeclaredWeight, 3) - round($totalLoadedWeight, 3)) > $epsilon) {
+                $validator->errors()->add(
+                    'manifest.bags',
+                    __('api.validation.bulk_manifest_weight_mismatch')
+                );
             }
         });
 
@@ -212,6 +282,7 @@ class BulkIntegrationController extends Controller
             $manifest = Cn31Manifest::create([
                 'company_id' => $company->id,
                 'cn31_number' => $manifestData['cn31_number'],
+                'dispatch_number_manifest' => $manifestData['dispatch_number_manifest'] ?? null,
                 'origin_office' => $manifestData['origin_office'],
                 'destination_office' => $manifestData['destination_office'],
                 'dispatch_date' => $manifestData['dispatch_date'],
@@ -233,19 +304,19 @@ class BulkIntegrationController extends Controller
                 $bag = $manifest->bags()->create([
                     'company_id' => $company->id,
                     'bag_number' => $bagPayload['bag_number'],
+                    'dispatch_number_bag' => $bagPayload['dispatch_number_bag'] ?? null,
                     'declared_package_count' => $bagPayload['package_count'],
                     'declared_weight_kg' => $bagPayload['total_weight_kg'],
                     'status' => 'pendiente_cn33',
                     'received_at' => now(),
                     'meta' => [
-                        'seal_number' => $bagPayload['seal_number'] ?? null,
                         'dispatch_note' => $bagPayload['dispatch_note'] ?? null,
                     ],
                 ]);
 
                 foreach ($bagPayload['packages'] as $packageIndex => $packagePayload) {
                     $cn22 = $packagePayload['cn22'];
-                    $registeredAt = $cn22['shipment_date'];
+                    $registeredAt = $cn22['shipment_date'] ?? now()->format('Y-m-d H:i:s');
                     $grossWeightGrams = (int) $cn22['gross_weight_grams'];
                     $weightKg = $packagePayload['weight_kg'] ?? $cn22['weight_kg'] ?? round($grossWeightGrams / 1000, 3);
                     $valueFobUsd = $cn22['value_fob_usd'] ?? $cn22['declared_amount'] ?? null;
@@ -253,7 +324,7 @@ class BulkIntegrationController extends Controller
                     $package = Package::create([
                         'company_id' => $company->id,
                         'tracking_code' => $packagePayload['tracking_code'],
-                        'reference' => $packagePayload['reference'] ?? null,
+                        'reference' => null,
                         'sender_name' => $cn22['sender_name'],
                         'sender_country' => $cn22['sender_country'],
                         'sender_address' => $cn22['sender_address'],
@@ -288,6 +359,7 @@ class BulkIntegrationController extends Controller
                             'integration_type' => 'bulk_cn31_cn33_cn22',
                             'cn31_number' => $manifest->cn31_number,
                             'bag_number' => $bag->bag_number,
+                            'dispatch_number_bag' => $bag->dispatch_number_bag,
                             'sender' => [
                                 'name' => $cn22['sender_name'],
                                 'country' => $cn22['sender_country'],
@@ -326,8 +398,9 @@ class BulkIntegrationController extends Controller
                         'cn31_bag_id' => $bag->id,
                         'package_id' => $package->id,
                         'tracking_code' => $packagePayload['tracking_code'],
-                        'reference' => $packagePayload['reference'] ?? null,
-                        'recipient_name' => $packagePayload['recipient_name'],
+                        'reference' => null,
+                        'recipient_name' => null,
+                        'origin' => $packagePayload['origin'],
                         'destination' => $packagePayload['destination'],
                         'weight_kg' => $packagePayload['weight_kg'],
                         'item_order' => $packageIndex + 1,
@@ -353,6 +426,7 @@ class BulkIntegrationController extends Controller
                     $createdPackages->push([
                         'tracking_code' => $package->tracking_code,
                         'bag_number' => $bag->bag_number,
+                        'dispatch_number_bag' => $bag->dispatch_number_bag,
                         'status' => $package->status,
                     ]);
                 }
@@ -382,6 +456,7 @@ class BulkIntegrationController extends Controller
             'data' => [
                 'manifest_id' => $manifest->id,
                 'cn31_number' => $manifest->cn31_number,
+                'dispatch_number_manifest' => $manifest->dispatch_number_manifest,
                 'status' => $manifest->status,
                 'total_bags' => $manifest->total_bags,
                 'total_packages' => $manifest->total_packages,
@@ -389,6 +464,7 @@ class BulkIntegrationController extends Controller
                 'bags' => $manifest->bags->map(fn ($bag) => [
                     'bag_id' => $bag->id,
                     'bag_number' => $bag->bag_number,
+                    'dispatch_number_bag' => $bag->dispatch_number_bag,
                     'status' => $bag->status,
                     'declared_package_count' => $bag->declared_package_count,
                     'loaded_package_count' => $bag->cn33Packages->count(),

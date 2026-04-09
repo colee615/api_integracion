@@ -2,7 +2,7 @@
 
 ## Objetivo
 
-Este documento unifica toda la documentacion funcional, tecnica y de consumo del proyecto `API Integracion`.
+Este documento unifica toda la documentacion funcional, tecnica y de consumo del proyecto `Integracion`.
 
 Aqui se explica en un solo lugar:
 
@@ -384,8 +384,7 @@ La saca debe existir previamente en `CN31`.
   "packages": [
     {
       "tracking_code": "EN000000001BO",
-      "reference": "INT-001",
-      "recipient_name": "Marco Antonio Espinoza Rojas",
+      "origin": "COCHABAMBA",
       "destination": "LA PAZ",
       "weight_kg": 0.25
     }
@@ -397,7 +396,7 @@ La saca debe existir previamente en `CN31`.
 
 - `packages`
 - `packages[].tracking_code`
-- `packages[].recipient_name`
+- `packages[].origin`
 - `packages[].destination`
 - `packages[].weight_kg`
 
@@ -453,7 +452,6 @@ POST /api/v1/cn22/shipments
   "records": [
     {
       "tracking_code": "EN000000001BO",
-      "reference": "INT-001",
       "origin_office": "COCHABAMBA",
       "destination_office": "LA PAZ",
       "sender_name": "Leonardo Doria Medina",
@@ -470,7 +468,6 @@ POST /api/v1/cn22/shipments
       "recipient_whatsapp": "76785423",
       "destination": "LA PAZ",
       "description": "Documentos personales",
-      "shipment_date": "2026-03-31 16:05:00",
       "gross_weight_grams": 250,
       "weight_kg": 0.250,
       "length_cm": 20,
@@ -550,7 +547,6 @@ Registrar en una sola operacion:
               "recipient_phone": "76785423",
               "recipient_whatsapp": "76785423",
               "description": "Documentos personales",
-              "shipment_date": "2026-04-08 11:05:00",
               "gross_weight_grams": 250,
               "length_cm": 20,
               "width_cm": 15,
@@ -625,7 +621,6 @@ Registrar en una sola operacion:
 - `records[].recipient_department`
 - `records[].recipient_phone`
 - `records[].description`
-- `records[].shipment_date`
 - `records[].gross_weight_grams`
 - `records[].length_cm`
 - `records[].width_cm`
@@ -637,7 +632,6 @@ Registrar en una sola operacion:
 - `tracking_code` unico por empresa
 - no duplicado dentro del mismo lote
 - compatible con `UPU S10` o formato alfanumerico acordado
-- `shipment_date` en formato `Y-m-d H:i:s`
 - `gross_weight_grams` entero mayor a `0`
 - `weight_kg` puede calcularse automaticamente
 - dimensiones mayores a `0`

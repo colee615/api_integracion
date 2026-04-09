@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\Company\AuthController as CompanyAuthController;
 use App\Http\Controllers\Api\Company\DashboardController as CompanyDashboardController;
+use App\Http\Controllers\Api\Company\PackageSearchController as CompanyPackageSearchController;
 use App\Http\Controllers\Api\BulkIntegrationController;
 use App\Http\Controllers\Api\Cn22ShipmentController;
 use App\Http\Controllers\Api\Cn31ManifestController;
@@ -22,6 +23,7 @@ Route::prefix('v1/company')->group(function (): void {
         Route::post('/auth/logout', [CompanyAuthController::class, 'logout']);
         Route::post('/auth/change-password', [CompanyAuthController::class, 'changePassword']);
         Route::get('/dashboard', CompanyDashboardController::class);
+        Route::get('/packages/search', CompanyPackageSearchController::class);
     });
 });
 

@@ -52,5 +52,5 @@
 @endsection
 
 @section('auth_footer')
-    <small class="text-muted">API Integracion | Entorno interno de administración</small>
+    <small class="text-muted">Integracion | Entorno interno de administración</small>
 @endsection

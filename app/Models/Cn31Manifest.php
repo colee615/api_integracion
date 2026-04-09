@@ -14,6 +14,7 @@ class Cn31Manifest extends Model
     protected $fillable = [
         'company_id',
         'cn31_number',
+        'dispatch_number_manifest',
         'origin_office',
         'destination_office',
         'dispatch_date',

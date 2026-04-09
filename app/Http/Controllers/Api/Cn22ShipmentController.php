@@ -37,7 +37,6 @@ class Cn22ShipmentController extends Controller
                     fn ($query) => $query->where('company_id', $company->id)
                 ),
             ],
-            'records.*.reference' => ['nullable', 'string', 'max:100'],
             'records.*.origin_office' => ['required', 'string', 'max:150'],
             'records.*.destination_office' => ['required', 'string', 'max:150'],
             'records.*.sender_name' => ['required', 'string', 'max:255'],
@@ -54,7 +53,6 @@ class Cn22ShipmentController extends Controller
             'records.*.recipient_whatsapp' => ['nullable', 'string', 'max:50'],
             'records.*.destination' => ['nullable', 'string', 'max:255'],
             'records.*.description' => ['required', 'string', 'max:500'],
-            'records.*.shipment_date' => ['required', 'date_format:Y-m-d H:i:s'],
             'records.*.gross_weight_grams' => ['required', 'integer', 'min:1'],
             'records.*.weight_kg' => ['nullable', 'numeric', 'gt:0'],
             'records.*.length_cm' => ['required', 'numeric', 'gt:0'],
@@ -90,8 +88,6 @@ class Cn22ShipmentController extends Controller
             'records.*.recipient_department.required' => __('api.validation.recipient_department_required'),
             'records.*.recipient_phone.required' => __('api.validation.recipient_phone_required'),
             'records.*.description.required' => __('api.validation.description_required'),
-            'records.*.shipment_date.required' => __('api.validation.shipment_date_required'),
-            'records.*.shipment_date.date_format' => __('api.validation.shipment_date_format'),
             'records.*.gross_weight_grams.required' => __('api.validation.gross_weight_required'),
             'records.*.gross_weight_grams.integer' => __('api.validation.gross_weight_integer'),
             'records.*.gross_weight_grams.min' => __('api.validation.gross_weight_min'),
@@ -119,7 +115,6 @@ class Cn22ShipmentController extends Controller
             'records.*.recipient_department' => 'departamento destinatario',
             'records.*.recipient_phone' => 'telefono destinatario',
             'records.*.description' => 'descripcion',
-            'records.*.shipment_date' => 'fecha y hora',
             'records.*.gross_weight_grams' => 'peso bruto',
             'records.*.weight_kg' => 'peso',
         ]);
@@ -171,7 +166,6 @@ class Cn22ShipmentController extends Controller
                 $package = Package::create([
                     'company_id' => $company->id,
                     'tracking_code' => $record['tracking_code'],
-                    'reference' => $record['reference'] ?? null,
                     'sender_name' => $record['sender_name'],
                     'sender_country' => $record['sender_country'],
                     'sender_address' => $record['sender_address'],
@@ -206,6 +200,7 @@ class Cn22ShipmentController extends Controller
                         'integration_type' => 'cn22',
                         'cn31_number' => $cn33Item?->bag?->manifest?->cn31_number,
                         'bag_number' => $cn33Item?->bag?->bag_number,
+                        'dispatch_number_bag' => $cn33Item?->bag?->dispatch_number_bag,
                         'sender' => [
                             'name' => $record['sender_name'],
                             'country' => $record['sender_country'],

@@ -37,12 +37,14 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
         Route::get('/companies', [CompanyController::class, 'index'])->name('companies.index');
         Route::post('/companies', [CompanyController::class, 'store'])->name('companies.store');
         Route::get('/companies/{company}', [CompanyController::class, 'show'])->name('companies.show');
+        Route::patch('/companies/{company}/settings', [CompanyController::class, 'updateSettings'])->name('companies.settings');
         Route::patch('/companies/{company}/status', [CompanyController::class, 'updateStatus'])->name('companies.status');
         Route::patch('/companies/{company}/locale', [CompanyController::class, 'updateLocale'])->name('companies.locale');
         Route::post('/companies/{company}/sessions/revoke', [CompanyController::class, 'revokeSessions'])->name('companies.sessions.revoke');
 
         Route::get('/tokens', [TokenController::class, 'index'])->name('tokens.index');
         Route::post('/tokens', [TokenController::class, 'store'])->name('tokens.store');
+        Route::patch('/tokens/{token}/settings', [TokenController::class, 'updateSettings'])->name('tokens.settings');
         Route::patch('/tokens/{token}/revoke', [TokenController::class, 'revoke'])->name('tokens.revoke');
         Route::patch('/tokens/{token}/reactivate', [TokenController::class, 'reactivate'])->name('tokens.reactivate');
         Route::patch('/tokens/{token}/extend', [TokenController::class, 'extend'])->name('tokens.extend');

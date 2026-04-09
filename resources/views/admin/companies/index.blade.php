@@ -10,7 +10,6 @@
     <section class="page-hero">
         <span class="page-kicker"><i class="fas fa-building"></i> Gestion comercial</span>
         <h1 class="page-title">Gestion de empresas</h1>
-        <p class="page-subtitle">Administra clientes, credenciales de acceso, estado operativo, idioma del portal y sesiones activas con una vista clara para supervision y soporte.</p>
     </section>
 @stop
 
@@ -41,25 +40,22 @@
                         <hr>
                         <x-adminlte-input name="login_email" type="email" label="Correo de acceso empresa" value="{{ old('login_email') }}" required />
                         <x-adminlte-input name="login_password" type="text" label="Contrasena inicial empresa" value="{{ old('login_password') }}" required />
-                        <x-adminlte-button type="submit" theme="primary" label="Crear empresa" icon="fas fa-save"/>
+                        <x-adminlte-button type="submit" theme="primary" label="Guardar empresa" icon="fas fa-save" class="table-style-submit"/>
                     </form>
                 </x-adminlte-card>
             </div>
 
             <div class="col-md-8">
                 <x-adminlte-card title="Cartera empresarial" theme="light" icon="fas fa-briefcase" class="panel-card">
-                    <div class="section-note mb-3">
-                        Vista consolidada para atencion interna, monitoreo de cuentas, control de idioma y accesos empresariales.
-                    </div>
-
                     <div class="table-responsive">
-                        <table class="table corp-table">
+                        <table class="table corp-table company-table">
                             <thead>
                                 <tr>
                                     <th>Empresa</th>
-                                    <th>Acceso</th>
+                                    <th>Correo</th>
                                     <th>Idioma</th>
-                                    <th>Operacion</th>
+                                    <th>Estado</th>
+                                    <th>Ultimo ingreso</th>
                                     <th>Sesiones</th>
                                     <th>Acciones</th>
                                 </tr>
@@ -73,52 +69,51 @@
                                             <small class="text-muted">Contacto: {{ $company->contact_name ?: 'Sin dato' }}</small>
                                         </td>
                                         <td>
-                                            <strong>{{ $company->user?->email ?? 'Sin usuario' }}</strong><br>
-                                            <small class="text-muted">Ultimo ingreso: {{ $company->user?->last_login_at?->format('Y-m-d H:i') ?? 'Sin ingresos' }}</small>
+                                            <strong>{{ $company->user?->email ?? 'Sin usuario' }}</strong>
                                         </td>
                                         <td>
-                                            <form method="POST" action="{{ route('admin.companies.locale', $company) }}">
-                                                @csrf
-                                                @method('PATCH')
-                                                <div class="d-flex align-items-center" style="gap:8px;">
-                                                    <select name="locale" class="form-control form-control-sm">
-                                                        <option value="es" @selected(($company->locale ?? 'es') === 'es')>Espanol</option>
-                                                        <option value="en" @selected(($company->locale ?? 'es') === 'en')>English</option>
-                                                    </select>
-                                                    <button type="submit" class="btn btn-xs btn-primary">Guardar</button>
-                                                </div>
-                                            </form>
+                                            <span class="badge badge-light company-locale-badge">
+                                                {{ ($company->locale ?? 'es') === 'en' ? 'English' : 'Espanol' }}
+                                            </span>
                                         </td>
                                         <td>
-                                            <div class="stat-pair">
-                                                <div class="stat-box">
-                                                    <span class="label">Estado</span>
-                                                    <span class="value">{{ $company->status === 'active' ? 'Activa' : 'Inactiva' }}</span>
-                                                </div>
-                                                <div class="stat-box">
-                                                    <span class="label">Carga</span>
-                                                    <span class="value">{{ $company->packages_count }}/{{ $company->movements_count }}</span>
-                                                </div>
-                                            </div>
+                                            <span class="badge badge-{{ $company->status === 'active' ? 'success' : 'secondary' }}">
+                                                {{ $company->status === 'active' ? 'Activa' : 'Inactiva' }}
+                                            </span>
+                                        </td>
+                                        <td>{{ $company->user?->last_login_at?->format('Y-m-d H:i') ?? 'Sin ingresos' }}</td>
+                                        <td>
+                                            <span class="detail-chip company-session-chip">
+                                                <i class="fas fa-user-clock"></i>
+                                                {{ $sessionCounts[$company->user?->id] ?? 0 }} activas
+                                            </span>
                                         </td>
                                         <td>
-                                            <span class="detail-chip"><i class="fas fa-user-clock"></i> {{ $sessionCounts[$company->user?->id] ?? 0 }} activas</span>
-                                        </td>
-                                        <td>
-                                            <div class="action-stack">
+                                            <div class="company-actions">
+                                                <button
+                                                    type="button"
+                                                class="btn btn-xs btn-info js-open-company-modal"
+                                                data-toggle="modal"
+                                                data-target="#company-edit-modal"
+                                                data-action="{{ route('admin.companies.settings', $company) }}"
+                                                data-company="{{ $company->name }}"
+                                                data-locale="{{ $company->locale ?? 'es' }}"
+                                                data-status="{{ $company->status }}">
+                                                    <i class="fas fa-edit"></i> Editar
+                                                </button>
+
                                                 <a href="{{ route('admin.companies.show', $company) }}" class="btn btn-xs btn-info">
                                                     <i class="fas fa-eye"></i> Ver detalle
                                                 </a>
-                                                <form method="POST" action="{{ route('admin.companies.status', $company) }}">
-                                                    @csrf
-                                                    @method('PATCH')
-                                                    <input type="hidden" name="status" value="{{ $company->status === 'active' ? 'inactive' : 'active' }}">
-                                                    <x-adminlte-button type="submit" theme="{{ $company->status === 'active' ? 'secondary' : 'success' }}" label="{{ $company->status === 'active' ? 'Desactivar' : 'Activar' }}" size="xs" icon="fas fa-exchange-alt"/>
-                                                </form>
                                                 @if ($company->user)
                                                     <form method="POST" action="{{ route('admin.companies.sessions.revoke', $company) }}">
                                                         @csrf
-                                                        <x-adminlte-button type="submit" theme="dark" label="Cerrar sesiones" size="xs" icon="fas fa-user-lock"/>
+                                                        <x-adminlte-button
+                                                            type="submit"
+                                                            theme="dark"
+                                                            label="Cerrar sesiones"
+                                                            size="xs"
+                                                            icon="fas fa-user-lock"/>
                                                     </form>
                                                 @endif
                                             </div>
@@ -126,7 +121,7 @@
                                     </tr>
                                 @empty
                                     <tr>
-                                        <td colspan="6" class="text-muted">Todavia no hay empresas registradas.</td>
+                                        <td colspan="7" class="text-muted">Todavia no hay empresas registradas.</td>
                                     </tr>
                                 @endforelse
                             </tbody>
@@ -136,8 +131,71 @@
             </div>
         </div>
     </div>
+
+    <div class="modal fade" id="company-edit-modal" tabindex="-1" aria-labelledby="company-edit-modal-label" aria-hidden="true">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <form method="POST" id="company-edit-form">
+                    @csrf
+                    @method('PATCH')
+
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="company-edit-modal-label">Editar empresa</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+
+                    <div class="modal-body">
+                        <div class="form-group mb-0">
+                            <label for="company-edit-locale">Idioma del portal</label>
+                            <select name="locale" id="company-edit-locale" class="form-control" required>
+                                <option value="es">Espanol</option>
+                                <option value="en">English</option>
+                            </select>
+                        </div>
+
+                        <div class="form-group mt-3 mb-0">
+                            <label for="company-edit-status">Estado de servicio</label>
+                            <select name="status" id="company-edit-status" class="form-control" required>
+                                <option value="active">Activa</option>
+                                <option value="inactive">Inactiva</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-default" data-dismiss="modal">Cancelar</button>
+                        <button type="submit" class="btn btn-info">
+                            <i class="fas fa-save"></i> Guardar cambios
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+@stop
+
+@section('js')
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('company-edit-form');
+    const nameField = document.getElementById('company-edit-name');
+    const localeField = document.getElementById('company-edit-locale');
+    const statusField = document.getElementById('company-edit-status');
+
+    document.querySelectorAll('.js-open-company-modal').forEach(function (button) {
+        button.addEventListener('click', function () {
+            form.action = button.dataset.action;
+            nameField.textContent = button.dataset.company || 'Empresa';
+            localeField.value = button.dataset.locale || 'es';
+            statusField.value = button.dataset.status || 'active';
+        });
+    });
+});
+</script>
 @stop
 
 @section('footer')
-    <strong>API Integracion.</strong> Gestion interna de empresas.
+    <strong>Integracion.</strong> Gestion interna de empresas.
 @stop

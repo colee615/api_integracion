@@ -15,6 +15,7 @@ use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
+use Illuminate\Support\Collection;
 use Illuminate\View\View;
 
 class CompanyController extends Controller
@@ -29,11 +30,25 @@ class CompanyController extends Controller
             ->latest()
             ->get();
 
-        $sessionCounts = DB::table('sessions')
+        $webSessionCounts = DB::table(config('session.table', 'sessions'))
             ->selectRaw('user_id, COUNT(*) as total')
             ->whereNotNull('user_id')
             ->groupBy('user_id')
             ->pluck('total', 'user_id');
+
+        $portalSessionCounts = collect(
+            $this->getCompanyPortalSessionCounts(
+                $companies->pluck('user.id')->filter()->all()
+            )
+        );
+
+        $sessionCounts = $webSessionCounts->map(
+            fn ($total) => (int) $total
+        );
+
+        foreach ($portalSessionCounts as $userId => $total) {
+            $sessionCounts[$userId] = (int) ($sessionCounts[$userId] ?? 0) + (int) $total;
+        }
 
         return view('admin.companies.index', [
             'companies' => $companies,
@@ -107,9 +122,14 @@ class CompanyController extends Controller
             ->limit(12)
             ->get();
 
-        $sessionCount = $company->user
-            ? (int) DB::table('sessions')->where('user_id', $company->user->id)->count()
-            : 0;
+        $sessionCount = 0;
+
+        if ($company->user) {
+            $sessionCount += (int) DB::table(config('session.table', 'sessions'))
+                ->where('user_id', $company->user->id)
+                ->count();
+            $sessionCount += $this->getCompanyPortalSessionCountForUser($company->user->id);
+        }
 
         return view('admin.companies.show', [
             'company' => $company,
@@ -192,16 +212,144 @@ class CompanyController extends Controller
         return back()->with('status', 'Idioma de empresa actualizado.');
     }
 
+    public function updateSettings(Request $request, Company $company): RedirectResponse
+    {
+        $validated = $request->validate([
+            'locale' => ['required', Rule::in(['es', 'en'])],
+            'status' => ['required', Rule::in(['active', 'inactive'])],
+        ]);
+
+        $company->forceFill([
+            'locale' => $validated['locale'],
+            'status' => $validated['status'],
+        ])->save();
+
+        if ($company->user) {
+            $company->user->forceFill([
+                'status' => $validated['status'],
+            ])->save();
+        }
+
+        return back()->with('status', 'Configuracion de empresa actualizada.');
+    }
+
     public function revokeSessions(Company $company): RedirectResponse
     {
         if (! $company->user) {
             return back()->with('status', 'La empresa no tiene usuario asociado.');
         }
 
-        DB::table('sessions')
+        $webSessionsRevoked = DB::table(config('session.table', 'sessions'))
             ->where('user_id', $company->user->id)
             ->delete();
 
-        return back()->with('status', 'Sesiones de empresa cerradas correctamente.');
+        $portalSessionsRevoked = $this->revokeCompanyPortalSessions($company->user->id);
+        $revokedTotal = $webSessionsRevoked + $portalSessionsRevoked;
+
+        return back()->with(
+            'status',
+            $revokedTotal > 0
+                ? 'Sesiones de empresa cerradas correctamente.'
+                : 'No habia sesiones activas para cerrar.'
+        );
+    }
+
+    /**
+     * @param  array<int>  $userIds
+     * @return array<int, int>
+     */
+    private function getCompanyPortalSessionCounts(array $userIds): array
+    {
+        if ($userIds === []) {
+            return [];
+        }
+
+        return $this->getCompanyPortalSessionEntries()
+            ->reduce(function (array $counts, object $entry) use ($userIds): array {
+                $payload = @unserialize($entry->value, ['allowed_classes' => false]);
+                $userId = is_array($payload) ? ($payload['user_id'] ?? null) : null;
+
+                if (! is_int($userId) || ! in_array($userId, $userIds, true)) {
+                    return $counts;
+                }
+
+                $counts[$userId] = ($counts[$userId] ?? 0) + 1;
+
+                return $counts;
+            }, []);
+    }
+
+    private function getCompanyPortalSessionCountForUser(int $userId): int
+    {
+        return $this->getCompanyPortalSessionCounts([$userId])[$userId] ?? 0;
+    }
+
+    private function revokeCompanyPortalSessions(int $userId): int
+    {
+        $entries = $this->getCompanyPortalSessionEntries()
+            ->filter(function (object $entry) use ($userId): bool {
+                $payload = @unserialize($entry->value, ['allowed_classes' => false]);
+
+                return is_array($payload) && ($payload['user_id'] ?? null) === $userId;
+            });
+
+        if ($entries->isEmpty()) {
+            return 0;
+        }
+
+        return DB::table($this->getCacheTableName())
+            ->whereIn('key', $entries->pluck('key')->all())
+            ->delete();
+    }
+
+    /**
+     * @return Collection<int, object>
+     */
+    private function getCompanyPortalSessionEntries(): Collection
+    {
+        $cacheStore = $this->getDatabaseCacheStoreName();
+
+        if ($cacheStore === null) {
+            return collect();
+        }
+
+        return DB::table($this->getCacheTableName())
+            ->select(['key', 'value', 'expiration'])
+            ->where('key', 'like', $this->getCompanyPortalSessionCachePrefix().'%')
+            ->where('expiration', '>', now()->timestamp)
+            ->get();
+    }
+
+    private function getCacheTableName(): string
+    {
+        $cacheStore = $this->getDatabaseCacheStoreName();
+
+        if ($cacheStore === null) {
+            return 'cache';
+        }
+
+        return (string) config("cache.stores.{$cacheStore}.table", 'cache');
+    }
+
+    private function getCompanyPortalSessionCachePrefix(): string
+    {
+        return (string) config('cache.prefix', 'laravel-cache-').'company_portal_session:';
+    }
+
+    private function getDatabaseCacheStoreName(): ?string
+    {
+        $defaultStore = config('cache.default');
+
+        if (config("cache.stores.{$defaultStore}.driver") === 'database') {
+            return $defaultStore;
+        }
+
+        foreach ((array) config('cache.stores', []) as $storeName => $storeConfig) {
+            if (($storeConfig['driver'] ?? null) === 'database') {
+                return (string) $storeName;
+            }
+        }
+
+        return null;
     }
 }

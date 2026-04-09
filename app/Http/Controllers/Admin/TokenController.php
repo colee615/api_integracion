@@ -81,6 +81,23 @@ class TokenController extends Controller
         return back()->with('status', 'Vigencia del token actualizada correctamente.');
     }
 
+    public function updateSettings(Request $request, ApiToken $token): RedirectResponse
+    {
+        $validated = $request->validate([
+            'starts_at' => ['required', 'date'],
+            'expires_at' => ['required', 'date', 'after:starts_at'],
+            'status' => ['required', Rule::in(['active', 'inactive'])],
+        ]);
+
+        $token->forceFill([
+            'starts_at' => now()->parse($validated['starts_at']),
+            'expires_at' => now()->parse($validated['expires_at']),
+            'revoked_at' => $validated['status'] === 'inactive' ? now() : null,
+        ])->save();
+
+        return back()->with('status', 'Configuracion del token actualizada correctamente.');
+    }
+
     public function destroy(ApiToken $token): RedirectResponse
     {
         $token->delete();

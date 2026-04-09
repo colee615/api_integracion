@@ -17,14 +17,17 @@ class Cn33BagController extends Controller
 {
     use FormatsIntegrationResponses;
 
-    public function store(Request $request, string $bagNumber): JsonResponse
+    public function store(Request $request, string $bagReference): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
 
         $bag = Cn31Bag::query()
             ->with('manifest')
             ->where('company_id', $company->id)
-            ->where('bag_number', $bagNumber)
+            ->where(function ($query) use ($bagReference) {
+                $query->where('dispatch_number_bag', $bagReference)
+                    ->orWhere('bag_number', $bagReference);
+            })
             ->first();
 
         if (! $bag) {
@@ -45,8 +48,7 @@ class Cn33BagController extends Controller
                     fn ($query) => $query->where('company_id', $company->id)
                 ),
             ],
-            'packages.*.reference' => ['nullable', 'string', 'max:100'],
-            'packages.*.recipient_name' => ['required', 'string', 'max:255'],
+            'packages.*.origin' => ['required', 'string', 'max:255'],
             'packages.*.destination' => ['required', 'string', 'max:255'],
             'packages.*.weight_kg' => ['required', 'numeric', 'gt:0'],
             'packages.*.notes' => ['nullable', 'string', 'max:255'],
@@ -56,7 +58,7 @@ class Cn33BagController extends Controller
             'packages.*.tracking_code.required' => __('api.validation.cn33_tracking_required'),
             'packages.*.tracking_code.distinct' => __('api.validation.cn33_tracking_distinct'),
             'packages.*.tracking_code.unique' => __('api.validation.cn33_tracking_unique'),
-            'packages.*.recipient_name.required' => __('api.validation.cn33_recipient_required'),
+            'packages.*.origin.required' => __('api.validation.origin_office_required'),
             'packages.*.destination.required' => __('api.validation.cn33_destination_required'),
             'packages.*.weight_kg.required' => __('api.validation.cn33_weight_required'),
             'packages.*.weight_kg.numeric' => __('api.validation.cn33_weight_numeric'),
@@ -85,6 +87,7 @@ class Cn33BagController extends Controller
                         'meta' => array_merge($package->meta ?? [], [
                             'cn31_number' => $bag->manifest?->cn31_number,
                             'bag_number' => $bag->bag_number,
+                            'dispatch_number_bag' => $bag->dispatch_number_bag,
                         ]),
                     ])->save();
                 }
@@ -94,8 +97,9 @@ class Cn33BagController extends Controller
                     'cn31_bag_id' => $bag->id,
                     'package_id' => $package?->id,
                     'tracking_code' => $record['tracking_code'],
-                    'reference' => $record['reference'] ?? null,
-                    'recipient_name' => $record['recipient_name'],
+                    'reference' => null,
+                    'recipient_name' => null,
+                    'origin' => $record['origin'],
                     'destination' => $record['destination'],
                     'weight_kg' => $record['weight_kg'],
                     'item_order' => $index + 1,
@@ -121,6 +125,7 @@ class Cn33BagController extends Controller
             'data' => [
                 'bag_id' => $bag->id,
                 'bag_number' => $bag->bag_number,
+                'dispatch_number_bag' => $bag->dispatch_number_bag,
                 'manifest_number' => $bag->manifest?->cn31_number,
                 'status' => $bag->status,
                 'declared_package_count' => $bag->declared_package_count,
@@ -133,14 +138,17 @@ class Cn33BagController extends Controller
         ], 201);
     }
 
-    public function show(Request $request, string $bagNumber): JsonResponse
+    public function show(Request $request, string $bagReference): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
 
         $bag = Cn31Bag::query()
             ->with(['manifest', 'cn33Packages.package'])
             ->where('company_id', $company->id)
-            ->where('bag_number', $bagNumber)
+            ->where(function ($query) use ($bagReference) {
+                $query->where('dispatch_number_bag', $bagReference)
+                    ->orWhere('bag_number', $bagReference);
+            })
             ->first();
 
         if (! $bag) {
@@ -155,6 +163,7 @@ class Cn33BagController extends Controller
             'data' => [
                 'id' => $bag->id,
                 'bag_number' => $bag->bag_number,
+                'dispatch_number_bag' => $bag->dispatch_number_bag,
                 'manifest_number' => $bag->manifest?->cn31_number,
                 'declared_package_count' => $bag->declared_package_count,
                 'declared_weight_kg' => (float) $bag->declared_weight_kg,
@@ -162,8 +171,7 @@ class Cn33BagController extends Controller
                 'packages' => $bag->cn33Packages->map(fn ($item) => [
                     'id' => $item->id,
                     'tracking_code' => $item->tracking_code,
-                    'reference' => $item->reference,
-                    'recipient_name' => $item->recipient_name,
+                    'origin' => $item->origin,
                     'destination' => $item->destination,
                     'weight_kg' => $item->weight_kg !== null ? (float) $item->weight_kg : null,
                     'status' => $item->status,

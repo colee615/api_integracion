@@ -41,6 +41,13 @@ class Cn31ManifestController extends Controller
                     fn ($query) => $query->where('company_id', $company->id)
                 ),
             ],
+            'dispatch_number_manifest' => [
+                'nullable',
+                'regex:/^[0-9]{10}$/',
+                Rule::unique('cn31_manifests', 'dispatch_number_manifest')->where(
+                    fn ($query) => $query->where('company_id', $company->id)
+                ),
+            ],
             'origin_office' => ['required', 'string', 'max:150'],
             'destination_office' => ['required', 'string', 'max:150'],
             'dispatch_date' => ['required', 'date_format:Y-m-d H:i:s'],
@@ -54,9 +61,16 @@ class Cn31ManifestController extends Controller
                     fn ($query) => $query->where('company_id', $company->id)
                 ),
             ],
+            'bags.*.dispatch_number_bag' => [
+                'nullable',
+                'regex:/^[0-9]{1,20}$/',
+                'distinct',
+                Rule::unique('cn31_bags', 'dispatch_number_bag')->where(
+                    fn ($query) => $query->where('company_id', $company->id)
+                ),
+            ],
             'bags.*.package_count' => ['required', 'integer', 'min:1'],
             'bags.*.total_weight_kg' => ['required', 'numeric', 'gt:0'],
-            'bags.*.seal_number' => ['nullable', 'string', 'max:100'],
             'bags.*.dispatch_note' => ['nullable', 'string', 'max:255'],
         ], [
             'cn31_number.required' => __('api.validation.cn31_number_required'),
@@ -70,6 +84,11 @@ class Cn31ManifestController extends Controller
             'bags.*.bag_number.required' => __('api.validation.bag_number_required'),
             'bags.*.bag_number.distinct' => __('api.validation.bag_number_distinct'),
             'bags.*.bag_number.unique' => __('api.validation.bag_number_unique'),
+            'bags.*.dispatch_number_bag.regex' => 'The bag dispatch number must contain only digits.',
+            'bags.*.dispatch_number_bag.distinct' => 'The bag dispatch number must not be repeated.',
+            'bags.*.dispatch_number_bag.unique' => 'The bag dispatch number has already been registered.',
+            'dispatch_number_manifest.regex' => 'The manifest dispatch number must contain exactly 10 digits.',
+            'dispatch_number_manifest.unique' => 'The manifest dispatch number has already been registered.',
             'bags.*.package_count.required' => __('api.validation.package_count_required'),
             'bags.*.package_count.integer' => __('api.validation.package_count_integer'),
             'bags.*.total_weight_kg.required' => __('api.validation.bag_total_weight_required'),
@@ -92,6 +111,7 @@ class Cn31ManifestController extends Controller
             $manifest = Cn31Manifest::create([
                 'company_id' => $company->id,
                 'cn31_number' => $validated['cn31_number'],
+                'dispatch_number_manifest' => $validated['dispatch_number_manifest'] ?? null,
                 'origin_office' => $validated['origin_office'],
                 'destination_office' => $validated['destination_office'],
                 'dispatch_date' => $validated['dispatch_date'],
@@ -109,12 +129,12 @@ class Cn31ManifestController extends Controller
                 $manifest->bags()->create([
                     'company_id' => $company->id,
                     'bag_number' => $bag['bag_number'],
+                    'dispatch_number_bag' => $bag['dispatch_number_bag'] ?? null,
                     'declared_package_count' => $bag['package_count'],
                     'declared_weight_kg' => $bag['total_weight_kg'],
                     'status' => 'pendiente_cn33',
                     'received_at' => now(),
                     'meta' => [
-                        'seal_number' => $bag['seal_number'] ?? null,
                         'dispatch_note' => $bag['dispatch_note'] ?? null,
                     ],
                 ]);
@@ -129,6 +149,7 @@ class Cn31ManifestController extends Controller
             'data' => [
                 'manifest_id' => $manifest->id,
                 'cn31_number' => $manifest->cn31_number,
+                'dispatch_number_manifest' => $manifest->dispatch_number_manifest,
                 'status' => $manifest->status,
                 'total_bags' => $manifest->total_bags,
                 'total_packages' => $manifest->total_packages,
@@ -136,6 +157,7 @@ class Cn31ManifestController extends Controller
                 'bags' => $manifest->bags->map(fn ($bag) => [
                     'bag_id' => $bag->id,
                     'bag_number' => $bag->bag_number,
+                    'dispatch_number_bag' => $bag->dispatch_number_bag,
                     'declared_package_count' => $bag->declared_package_count,
                     'declared_weight_kg' => (float) $bag->declared_weight_kg,
                     'status' => $bag->status,
@@ -166,6 +188,7 @@ class Cn31ManifestController extends Controller
             'data' => [
                 'id' => $manifest->id,
                 'cn31_number' => $manifest->cn31_number,
+                'dispatch_number_manifest' => $manifest->dispatch_number_manifest,
                 'origin_office' => $manifest->origin_office,
                 'destination_office' => $manifest->destination_office,
                 'dispatch_date' => $manifest->dispatch_date?->toIso8601String(),
@@ -176,6 +199,7 @@ class Cn31ManifestController extends Controller
                 'bags' => $manifest->bags->map(fn ($bag) => [
                     'id' => $bag->id,
                     'bag_number' => $bag->bag_number,
+                    'dispatch_number_bag' => $bag->dispatch_number_bag,
                     'declared_package_count' => $bag->declared_package_count,
                     'declared_weight_kg' => (float) $bag->declared_weight_kg,
                     'loaded_packages' => $bag->cn33Packages->count(),

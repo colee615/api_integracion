@@ -209,16 +209,41 @@
         background: linear-gradient(180deg, #ffffff 0%, #fbfdff 100%);
     }
 
-    .detail-chip {
+    .form-zone .form-control,
+    .form-zone .custom-select {
+        border-color: #d8e1eb;
+        border-radius: .65rem;
+        min-height: 42px;
+        box-shadow: none;
+    }
+
+    .form-zone .form-control:focus,
+    .form-zone .custom-select:focus {
+        border-color: #9bb3cc;
+        box-shadow: 0 0 0 .12rem rgba(37, 84, 124, 0.1);
+    }
+
+    .table-style-submit.btn,
+    .table-style-submit button {
         display: inline-flex;
         align-items: center;
+        justify-content: center;
         gap: .45rem;
-        padding: .35rem .65rem;
-        border-radius: 999px;
-        font-size: .78rem;
-        font-weight: 600;
-        background: #edf4ff;
-        color: #274c77;
+        min-height: 40px;
+        padding: .65rem 1rem;
+        border-radius: .65rem;
+        border: 1px solid #d8e1eb !important;
+        background: #f8fbfd !important;
+        color: #274c77 !important;
+        box-shadow: none !important;
+        font-weight: 700;
+    }
+
+    .table-style-submit.btn:hover,
+    .table-style-submit button:hover {
+        background: #eef4fb !important;
+        border-color: #c9d7e6 !important;
+        color: #1f3e61 !important;
     }
 
     .corp-table {
@@ -239,38 +264,25 @@
     .corp-table tbody td {
         vertical-align: middle;
         border-color: #e8eef5;
+        padding: 1rem .9rem;
     }
 
     .corp-table tbody tr:hover {
         background: #fbfdff;
     }
 
-    .stat-pair {
-        display: grid;
-        grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: .75rem;
-    }
-
-    .stat-box {
-        border: 1px solid #e3ebf3;
-        border-radius: .85rem;
-        background: #f8fbfd;
-        padding: .9rem 1rem;
-    }
-
-    .stat-box .label {
-        display: block;
-        font-size: .72rem;
-        color: #64748b;
-        text-transform: uppercase;
-        letter-spacing: .08em;
-        margin-bottom: .35rem;
-    }
-
-    .stat-box .value {
-        font-size: 1.2rem;
+    .detail-chip {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .45rem;
+        padding: .45rem .75rem;
+        border-radius: 999px;
+        font-size: .76rem;
         font-weight: 700;
-        color: var(--corp-ink);
+        background: #eef4fb;
+        color: #274c77;
+        border: 1px solid #d8e4f0;
     }
 
     .section-note {
@@ -293,17 +305,122 @@
         font-size: .84rem;
     }
 
+    .inline-actions,
+    .inline-actions form {
+        margin: 0;
+        width: 100%;
+    }
+
+    .inline-actions .btn,
+    .inline-actions button {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .45rem;
+        width: 100%;
+        min-width: 160px;
+        min-height: 40px;
+        padding: .65rem .9rem;
+        border-radius: .65rem;
+        font-weight: 700;
+        font-size: .86rem;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    .company-table td {
+        vertical-align: top;
+    }
+
+    .user-table td:last-child {
+        width: 190px;
+    }
+
+    .company-table strong {
+        color: var(--corp-ink);
+    }
+
+    .company-locale-form,
+    .company-actions {
+        display: flex;
+        flex-direction: column;
+        gap: .45rem;
+        margin: 0;
+    }
+
+    .company-locale-form .form-control {
+        min-width: 140px;
+    }
+
+    .company-locale-form .btn,
+    .company-actions .btn,
+    .company-actions form {
+        width: 100%;
+    }
+
+    .company-actions {
+        min-width: 170px;
+    }
+
+    .company-actions .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .4rem;
+        width: 100%;
+        min-height: 38px;
+        padding: .65rem .9rem;
+        border-radius: .65rem;
+        font-weight: 700;
+        font-size: .86rem;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    .company-session-chip {
+        min-width: 110px;
+        white-space: nowrap;
+    }
+
+    .company-load-note {
+        margin-top: .35rem;
+        font-size: .8rem;
+    }
+
     .action-stack {
         display: flex;
         flex-direction: column;
         gap: .45rem;
-        min-width: 122px;
+        min-width: 170px;
     }
 
-    .action-stack .btn,
-    .inline-actions .btn {
+    .action-stack > .btn,
+    .action-stack > form {
+        width: 100%;
+        margin: 0;
+    }
+
+    .action-stack form .btn,
+    .action-stack form button,
+    .action-stack > .btn {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        gap: .45rem;
+        width: 100%;
+        min-height: 40px;
+        padding: .65rem .9rem;
         border-radius: .65rem;
-        font-weight: 600;
+        font-weight: 700;
+        font-size: .86rem;
+        line-height: 1.2;
+        white-space: nowrap;
+    }
+
+    @media (max-width: 991.98px) {
+        .company-actions {
+            min-width: 155px;
+        }
     }
 
     .login-page {

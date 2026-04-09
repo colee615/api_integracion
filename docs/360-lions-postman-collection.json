@@ -1,7 +1,7 @@
 {
   "info": {
     "_postman_id": "2ad7d91a-c7d8-4e66-9f76-360lions-api-integracion",
-    "name": "360 Lions - Flujo Completo API Integracion",
+    "name": "360 Lions - Flujo Completo Integracion",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
     "description": "Coleccion para probar el flujo completo de 360 Lions usando un unico token manual: validacion, CN31, CN33, CN22, consultas, portal y webhooks."
   },
@@ -174,7 +174,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"packages\": [\n    {\n      \"tracking_code\": \"{{tracking_code}}\",\n      \"reference\": \"INT-360-001\",\n      \"recipient_name\": \"Marco Antonio Espinoza Rojas\",\n      \"destination\": \"LA PAZ\",\n      \"weight_kg\": 0.250,\n      \"notes\": \"Paquete 360 Lions\"\n    }\n  ]\n}"
+          "raw": "{\n  \"packages\": [\n    {\n      \"tracking_code\": \"{{tracking_code}}\",\n      \"origin\": \"COCHABAMBA\",\n      \"destination\": \"LA PAZ\",\n      \"weight_kg\": 0.250,\n      \"notes\": \"Paquete 360 Lions\"\n    }\n  ]\n}"
         },
         "url": {
           "raw": "{{base_url}}/cn33/bags/{{bag_number}}/packages",
@@ -210,7 +210,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"records\": [\n    {\n      \"tracking_code\": \"{{tracking_code}}\",\n      \"reference\": \"INT-360-001\",\n      \"origin_office\": \"COCHABAMBA\",\n      \"destination_office\": \"LA PAZ\",\n      \"sender_name\": \"360 Lions\",\n      \"sender_country\": \"BOLIVIA\",\n      \"sender_address\": \"Av. Integracion 123\",\n      \"sender_phone\": \"70000000\",\n      \"recipient_name\": \"Marco Antonio Espinoza Rojas\",\n      \"recipient_document\": \"1234567\",\n      \"recipient_address\": \"Av Mario Mercado 220\",\n      \"recipient_address_reference\": \"Puerta azul frente a farmacia\",\n      \"recipient_city\": \"LA PAZ\",\n      \"recipient_department\": \"LA PAZ\",\n      \"recipient_phone\": \"76785423\",\n      \"recipient_whatsapp\": \"76785423\",\n      \"destination\": \"LA PAZ\",\n      \"description\": \"Documentos personales\",\n      \"shipment_date\": \"2026-04-08 10:05:00\",\n      \"gross_weight_grams\": 250,\n      \"weight_kg\": 0.250,\n      \"length_cm\": 20,\n      \"width_cm\": 15,\n      \"height_cm\": 2,\n      \"value_fob_usd\": 17.00,\n      \"customs_items\": [\n        {\n          \"description\": \"Documentos\",\n          \"quantity\": 1,\n          \"value\": 17.00,\n          \"weight_kg\": 0.250,\n          \"hs_code\": \"490110\",\n          \"origin_country\": \"BO\"\n        }\n      ]\n    }\n  ]\n}"
+          "raw": "{\n  \"records\": [\n    {\n      \"tracking_code\": \"{{tracking_code}}\",\n      \"origin_office\": \"COCHABAMBA\",\n      \"destination_office\": \"LA PAZ\",\n      \"sender_name\": \"360 Lions\",\n      \"sender_country\": \"BOLIVIA\",\n      \"sender_address\": \"Av. Integracion 123\",\n      \"sender_phone\": \"70000000\",\n      \"recipient_name\": \"Marco Antonio Espinoza Rojas\",\n      \"recipient_document\": \"1234567\",\n      \"recipient_address\": \"Av Mario Mercado 220\",\n      \"recipient_address_reference\": \"Puerta azul frente a farmacia\",\n      \"recipient_city\": \"LA PAZ\",\n      \"recipient_department\": \"LA PAZ\",\n      \"recipient_phone\": \"76785423\",\n      \"recipient_whatsapp\": \"76785423\",\n      \"destination\": \"LA PAZ\",\n      \"description\": \"Documentos personales\",\n      \"gross_weight_grams\": 250,\n      \"weight_kg\": 0.250,\n      \"length_cm\": 20,\n      \"width_cm\": 15,\n      \"height_cm\": 2,\n      \"value_fob_usd\": 17.00,\n      \"customs_items\": [\n        {\n          \"description\": \"Documentos\",\n          \"quantity\": 1,\n          \"value\": 17.00,\n          \"weight_kg\": 0.250,\n          \"hs_code\": \"490110\",\n          \"origin_country\": \"BO\"\n        }\n      ]\n    }\n  ]\n}"
         },
         "url": {
           "raw": "{{base_url}}/cn22/shipments",

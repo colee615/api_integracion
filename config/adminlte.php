@@ -14,7 +14,7 @@ return [
     |
     */
 
-    'title' => 'API Integracion',
+    'title' => 'Integracion',
     'title_prefix' => 'Panel | ',
     'title_postfix' => '',
 
@@ -63,7 +63,7 @@ return [
     |
     */
 
-    'logo' => '<b>API</b> Integracion',
+    'logo' => '<b>Integracion</b>',
     'logo_img' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
     'logo_img_class' => 'brand-image img-circle elevation-3',
     'logo_img_xl' => null,
