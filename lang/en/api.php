@@ -17,6 +17,8 @@ return [
         'password_changed' => 'Password updated successfully.',
         'package_delivered_success' => 'Package marked as delivered successfully.',
         'package_delivered_internal' => 'Package delivered through the internal API.',
+        'package_delivery_attempt_success' => 'Delivery attempt recorded successfully.',
+        'package_delivery_attempt_internal' => 'Delivery attempt number :attempt recorded through the internal API.',
     ],
     'labels' => [
         'no_data' => 'No data',

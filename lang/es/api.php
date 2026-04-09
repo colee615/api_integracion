@@ -17,6 +17,8 @@ return [
         'password_changed' => 'Contrasena actualizada correctamente.',
         'package_delivered_success' => 'Paquete marcado como entregado correctamente.',
         'package_delivered_internal' => 'Paquete entregado mediante API interna.',
+        'package_delivery_attempt_success' => 'Intento de entrega registrado correctamente.',
+        'package_delivery_attempt_internal' => 'Intento de entrega numero :attempt registrado mediante API interna.',
     ],
     'labels' => [
         'no_data' => 'Sin dato',

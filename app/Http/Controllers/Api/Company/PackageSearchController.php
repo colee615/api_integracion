@@ -90,6 +90,13 @@ class PackageSearchController extends Controller
                                     'customs_items' => $cn33Package->package->customs_items ?? [],
                                     'registered_at' => $cn33Package->package->registered_at?->toIso8601String(),
                                     'last_movement_at' => $cn33Package->package->last_movement_at?->toIso8601String(),
+                                    'delivery_attempts' => (int) $cn33Package->package->delivery_attempts,
+                                    'last_delivery_attempt_at' => $cn33Package->package->last_delivery_attempt_at?->toIso8601String(),
+                                    'last_delivery_attempt' => [
+                                        'attempt' => (int) $cn33Package->package->delivery_attempts,
+                                        'location' => $cn33Package->package->latestDeliveryAttemptLocation(),
+                                        'description' => $cn33Package->package->latestDeliveryAttemptDescription(),
+                                    ],
                                     'delivered_at' => $cn33Package->package->meta['delivered_at'] ?? null,
                                     'movements' => $cn33Package->package->movements->map(fn ($movement) => [
                                         'id' => $movement->id,
@@ -161,6 +168,13 @@ class PackageSearchController extends Controller
                     'dispatch_number_bag' => $package->meta['dispatch_number_bag'] ?? null,
                     'registered_at' => $package->registered_at?->toIso8601String(),
                     'last_movement_at' => $package->last_movement_at?->toIso8601String(),
+                    'delivery_attempts' => (int) $package->delivery_attempts,
+                    'last_delivery_attempt_at' => $package->last_delivery_attempt_at?->toIso8601String(),
+                    'last_delivery_attempt' => [
+                        'attempt' => (int) $package->delivery_attempts,
+                        'location' => $package->latestDeliveryAttemptLocation(),
+                        'description' => $package->latestDeliveryAttemptDescription(),
+                    ],
                     'api_result' => $package->meta['api_result'] ?? [],
                     'delivered_at' => $package->meta['delivered_at'] ?? null,
                     'movements' => $package->movements->map(fn ($movement) => [

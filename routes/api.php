@@ -9,6 +9,7 @@ use App\Http\Controllers\Api\Cn31ManifestController;
 use App\Http\Controllers\Api\Cn33BagController;
 use App\Http\Controllers\Api\Auth\MeController;
 use App\Http\Controllers\Api\IntegrationContextController;
+use App\Http\Controllers\Api\InternalPackageDeliveryAttemptController;
 use App\Http\Controllers\Api\InternalPackageDeliveryController;
 use App\Http\Controllers\Api\PackageController;
 use App\Http\Controllers\Api\PackageMovementController;
@@ -57,5 +58,6 @@ Route::prefix('v1')
 
 Route::prefix('v1/internal')
     ->group(function (): void {
+        Route::post('/packages/delivery-attempt', InternalPackageDeliveryAttemptController::class);
         Route::post('/packages/deliver', InternalPackageDeliveryController::class);
     });

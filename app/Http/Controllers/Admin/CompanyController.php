@@ -72,6 +72,8 @@ class CompanyController extends Controller
             'packages' => Package::where('company_id', $company->id)->count(),
             'movements' => PackageMovement::where('company_id', $company->id)->count(),
             'delivered_packages' => Package::where('company_id', $company->id)->where('status', 'entregado')->count(),
+            'packages_with_delivery_attempts' => Package::where('company_id', $company->id)->where('delivery_attempts', '>', 0)->count(),
+            'total_delivery_attempts' => (int) Package::where('company_id', $company->id)->sum('delivery_attempts'),
             'delivered_bags' => Cn31Bag::where('company_id', $company->id)->where('status', 'entregado')->count(),
             'delivered_manifests' => Cn31Manifest::where('company_id', $company->id)->where('status', 'entregado')->count(),
         ];

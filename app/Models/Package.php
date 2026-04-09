@@ -46,6 +46,8 @@ class Package extends Model
         'status',
         'registered_at',
         'last_movement_at',
+        'delivery_attempts',
+        'last_delivery_attempt_at',
         'meta',
     ];
 
@@ -54,8 +56,10 @@ class Package extends Model
         return [
             'registered_at' => 'datetime',
             'last_movement_at' => 'datetime',
+            'last_delivery_attempt_at' => 'datetime',
             'shipment_date' => 'datetime',
             'pre_alert_at' => 'datetime',
+            'delivery_attempts' => 'integer',
             'gross_weight_grams' => 'integer',
             'weight_kg' => 'decimal:3',
             'length_cm' => 'decimal:2',
@@ -80,5 +84,15 @@ class Package extends Model
     public function cn33Package(): HasOne
     {
         return $this->hasOne(Cn33Package::class);
+    }
+
+    public function latestDeliveryAttemptDescription(): ?string
+    {
+        return $this->meta['last_delivery_attempt']['description'] ?? null;
+    }
+
+    public function latestDeliveryAttemptLocation(): ?string
+    {
+        return $this->meta['last_delivery_attempt']['location'] ?? null;
     }
 }

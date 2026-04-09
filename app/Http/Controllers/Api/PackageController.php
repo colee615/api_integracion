@@ -149,6 +149,13 @@ class PackageController extends Controller
             'status_label' => PackageStatusCatalog::labelForStatus($package->status),
             'registered_at' => $package->registered_at?->toIso8601String(),
             'last_movement_at' => $package->last_movement_at?->toIso8601String(),
+            'delivery_attempts' => (int) $package->delivery_attempts,
+            'last_delivery_attempt_at' => $package->last_delivery_attempt_at?->toIso8601String(),
+            'last_delivery_attempt' => [
+                'attempt' => (int) $package->delivery_attempts,
+                'location' => $package->latestDeliveryAttemptLocation(),
+                'description' => $package->latestDeliveryAttemptDescription(),
+            ],
             'meta' => $package->meta ?? [],
             'movements' => $package->movements->map(fn ($movement) => [
                 'id' => $movement->id,

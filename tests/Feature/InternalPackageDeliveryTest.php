@@ -142,4 +142,93 @@ class InternalPackageDeliveryTest extends TestCase
         ])->assertStatus(422)
             ->assertJsonValidationErrors(['tracking_code']);
     }
+
+    public function test_internal_delivery_attempt_api_increments_attempts_and_creates_incident_movement(): void
+    {
+        $company = Company::create([
+            'name' => 'Empresa Intentos',
+            'slug' => 'empresa-intentos',
+            'status' => 'active',
+        ]);
+
+        $manifest = Cn31Manifest::create([
+            'company_id' => $company->id,
+            'cn31_number' => 'CN31-ATTEMPTS-001',
+            'origin_office' => 'COCHABAMBA',
+            'destination_office' => 'LA PAZ',
+            'dispatch_date' => now()->subDay(),
+            'total_bags' => 1,
+            'total_packages' => 1,
+            'total_weight_kg' => 0.500,
+            'status' => 'conciliado',
+        ]);
+
+        $bag = Cn31Bag::create([
+            'company_id' => $company->id,
+            'cn31_manifest_id' => $manifest->id,
+            'bag_number' => 'SACA-ATTEMPTS-001',
+            'declared_package_count' => 1,
+            'declared_weight_kg' => 0.500,
+            'status' => 'conciliado',
+        ]);
+
+        $package = Package::create([
+            'company_id' => $company->id,
+            'tracking_code' => 'EN000000903BO',
+            'recipient_name' => 'Cliente Intentos',
+            'status' => 'en_ruta_entrega',
+            'registered_at' => now()->subDay(),
+            'last_movement_at' => now()->subHour(),
+        ]);
+
+        Cn33Package::create([
+            'company_id' => $company->id,
+            'cn31_bag_id' => $bag->id,
+            'package_id' => $package->id,
+            'tracking_code' => $package->tracking_code,
+            'recipient_name' => 'Cliente Intentos',
+            'destination' => 'LA PAZ',
+            'weight_kg' => 0.500,
+            'status' => 'documentado_cn22',
+        ]);
+
+        $occurredAt = '2026-04-09T10:15:00-04:00';
+
+        $this->postJson('/api/v1/internal/packages/delivery-attempt', [
+            'tracking_code' => 'EN000000903BO',
+            'occurred_at' => $occurredAt,
+            'location' => 'LA PAZ',
+            'description' => 'No se encontro al destinatario en domicilio.',
+        ], [
+            'Accept' => 'application/json',
+        ])->assertOk()
+            ->assertJsonPath('data.tracking_code', 'EN000000903BO')
+            ->assertJsonPath('data.delivery_attempts', 1)
+            ->assertJsonPath('data.status', 'incidencia_entrega')
+            ->assertJsonPath('data.last_delivery_attempt.location', 'LA PAZ');
+
+        $this->assertDatabaseHas('packages', [
+            'company_id' => $company->id,
+            'tracking_code' => 'EN000000903BO',
+            'status' => 'incidencia_entrega',
+            'delivery_attempts' => 1,
+        ]);
+
+        $this->assertDatabaseHas('package_movements', [
+            'company_id' => $company->id,
+            'package_id' => $package->id,
+            'status' => 'incidencia_entrega',
+            'location' => 'LA PAZ',
+            'description' => 'No se encontro al destinatario en domicilio.',
+        ]);
+
+        $this->assertNotNull(
+            Package::find($package->id)?->last_delivery_attempt_at
+        );
+
+        $this->assertSame(
+            1,
+            Cn33Package::where('tracking_code', 'EN000000903BO')->first()?->meta['delivery_attempts'] ?? null
+        );
+    }
 }

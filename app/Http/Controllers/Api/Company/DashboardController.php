@@ -29,6 +29,11 @@ class DashboardController extends Controller
         $deliveredPackagesCount = Package::where('company_id', $company->id)
             ->where('status', 'entregado')
             ->count();
+        $packagesWithAttemptsCount = Package::where('company_id', $company->id)
+            ->where('delivery_attempts', '>', 0)
+            ->count();
+        $totalDeliveryAttempts = (int) Package::where('company_id', $company->id)
+            ->sum('delivery_attempts');
         $deliveredBagsCount = Cn31Bag::where('company_id', $company->id)
             ->where('status', 'entregado')
             ->count();
@@ -132,6 +137,8 @@ class DashboardController extends Controller
                     'cn33_packages' => $cn33PackagesCount,
                     'delivered_packages' => $deliveredPackagesCount,
                     'pending_delivery_packages' => max($packagesCount - $deliveredPackagesCount, 0),
+                    'packages_with_delivery_attempts' => $packagesWithAttemptsCount,
+                    'total_delivery_attempts' => $totalDeliveryAttempts,
                     'delivered_bags' => $deliveredBagsCount,
                     'pending_delivery_bags' => max($bagsCount - $deliveredBagsCount, 0),
                     'delivered_manifests' => $deliveredManifestsCount,
@@ -153,6 +160,8 @@ class DashboardController extends Controller
                         'delivered_packages' => $deliveredPackagesCount,
                         'total_packages' => $packagesCount,
                         'pending_delivery_packages' => max($packagesCount - $deliveredPackagesCount, 0),
+                        'packages_with_delivery_attempts' => $packagesWithAttemptsCount,
+                        'total_delivery_attempts' => $totalDeliveryAttempts,
                         'delivered_bags' => $deliveredBagsCount,
                         'total_bags' => $bagsCount,
                         'delivered_manifests' => $deliveredManifestsCount,
@@ -267,6 +276,13 @@ class DashboardController extends Controller
                         'dispatch_number_bag' => $package->meta['dispatch_number_bag'] ?? null,
                         'registered_at' => $package->registered_at?->toIso8601String(),
                         'last_movement_at' => $package->last_movement_at?->toIso8601String(),
+                        'delivery_attempts' => (int) $package->delivery_attempts,
+                        'last_delivery_attempt_at' => $package->last_delivery_attempt_at?->toIso8601String(),
+                        'last_delivery_attempt' => [
+                            'attempt' => (int) $package->delivery_attempts,
+                            'location' => $package->latestDeliveryAttemptLocation(),
+                            'description' => $package->latestDeliveryAttemptDescription(),
+                        ],
                         'api_result' => $package->meta['api_result'] ?? [],
                         'delivered_at' => $package->meta['delivered_at'] ?? null,
                         'movements' => $package->movements->map(fn ($movement) => [
@@ -353,6 +369,13 @@ class DashboardController extends Controller
                                         : null,
                                     'currency_code' => $cn33Package->package->currency_code,
                                     'status_label' => PackageStatusCatalog::labelForStatus($cn33Package->package->status),
+                                    'delivery_attempts' => (int) $cn33Package->package->delivery_attempts,
+                                    'last_delivery_attempt_at' => $cn33Package->package->last_delivery_attempt_at?->toIso8601String(),
+                                    'last_delivery_attempt' => [
+                                        'attempt' => (int) $cn33Package->package->delivery_attempts,
+                                        'location' => $cn33Package->package->latestDeliveryAttemptLocation(),
+                                        'description' => $cn33Package->package->latestDeliveryAttemptDescription(),
+                                    ],
                                     'customs_items' => $cn33Package->package->customs_items ?? [],
                                     'delivered_at' => $cn33Package->package->meta['delivered_at'] ?? null,
                                     'movements' => $cn33Package->package->movements->map(fn ($movement) => [

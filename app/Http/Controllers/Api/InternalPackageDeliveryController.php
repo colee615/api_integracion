@@ -47,6 +47,7 @@ class InternalPackageDeliveryController extends Controller
             $package->forceFill([
                 'status' => 'entregado',
                 'last_movement_at' => $occurredAt,
+                'last_delivery_attempt_at' => $package->last_delivery_attempt_at,
                 'meta' => array_merge($package->meta ?? [], [
                     'delivered_at' => $occurredAt->toIso8601String(),
                     'delivery_source' => 'internal_delivery_api',
@@ -120,6 +121,8 @@ class InternalPackageDeliveryController extends Controller
                 'tracking_code' => $package->tracking_code,
                 'status' => $package->status,
                 'status_label' => PackageStatusCatalog::labelForStatus($package->status),
+                'delivery_attempts' => (int) $package->delivery_attempts,
+                'last_delivery_attempt_at' => $package->last_delivery_attempt_at?->toIso8601String(),
                 'delivered_at' => $occurredAt->toIso8601String(),
                 'bag' => $package->cn33Package?->bag ? [
                     'bag_number' => $package->cn33Package->bag->bag_number,
