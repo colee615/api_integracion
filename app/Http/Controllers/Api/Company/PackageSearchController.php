@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cn31Bag;
 use App\Models\Cn31Manifest;
 use App\Models\Package;
+use App\Support\PackageStatusCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
@@ -122,9 +123,10 @@ class PackageSearchController extends Controller
             ->map(fn ($package) => [
                 'type' => 'package',
                 'label' => $package->tracking_code,
-                'subtitle' => trim(($package->sender_name ?? 'Sin dato').' | '.($package->recipient_name ?? 'Sin dato')),
-                'meta' => trim(($package->origin_office ?? 'Sin dato').' -> '.($package->destination_office ?? $package->destination ?? 'Sin dato')),
+                'subtitle' => trim(($package->sender_name ?? __('api.labels.no_data')).' | '.($package->recipient_name ?? __('api.labels.no_data'))),
+                'meta' => trim(($package->origin_office ?? __('api.labels.no_data')).' -> '.($package->destination_office ?? $package->destination ?? __('api.labels.no_data'))),
                 'status' => $package->status,
+                'status_label' => PackageStatusCatalog::labelForStatus($package->status),
                 'package' => [
                     'id' => $package->id,
                     'tracking_code' => $package->tracking_code,
@@ -153,6 +155,7 @@ class PackageSearchController extends Controller
                     'value_fob_usd' => $package->value_fob_usd !== null ? (float) $package->value_fob_usd : null,
                     'currency_code' => $package->currency_code,
                     'status' => $package->status,
+                    'status_label' => PackageStatusCatalog::labelForStatus($package->status),
                     'manifest_number' => $package->meta['cn31_number'] ?? null,
                     'bag_number' => $package->meta['bag_number'] ?? null,
                     'dispatch_number_bag' => $package->meta['dispatch_number_bag'] ?? null,
@@ -163,6 +166,7 @@ class PackageSearchController extends Controller
                     'movements' => $package->movements->map(fn ($movement) => [
                         'id' => $movement->id,
                         'status' => $movement->status,
+                        'status_label' => PackageStatusCatalog::labelForStatus($movement->status),
                         'location' => $movement->location,
                         'description' => $movement->description,
                     ])->values(),
@@ -185,9 +189,10 @@ class PackageSearchController extends Controller
             ->map(fn ($manifest) => [
                 'type' => 'manifest',
                 'label' => $manifest->cn31_number,
-                'subtitle' => trim(($manifest->origin_office ?? 'Sin dato').' -> '.($manifest->destination_office ?? 'Sin dato')),
+                'subtitle' => trim(($manifest->origin_office ?? __('api.labels.no_data')).' -> '.($manifest->destination_office ?? __('api.labels.no_data'))),
                 'meta' => "{$manifest->total_bags} sacas | {$manifest->total_packages} paquetes",
                 'status' => $manifest->status,
+                'status_label' => PackageStatusCatalog::labelForStatus($manifest->status),
                 'manifest' => $buildManifestPayload($manifest),
             ]);
 
@@ -215,6 +220,7 @@ class PackageSearchController extends Controller
                     'subtitle' => $bag->bag_number ?: 'Saca',
                     'meta' => ($manifest?->cn31_number ?: 'Sin CN31').' | '.((int) $bag->declared_package_count).' paquetes',
                     'status' => $bag->status,
+                    'status_label' => PackageStatusCatalog::labelForStatus($bag->status),
                     'selected_bag_id' => $bag->id,
                     'manifest' => $manifest ? $buildManifestPayload($manifest) : null,
                 ];

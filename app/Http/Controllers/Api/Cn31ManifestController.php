@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\FormatsIntegrationResponses;
 use App\Http\Controllers\Controller;
 use App\Models\Cn31Manifest;
+use App\Support\PackageStatusCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -84,11 +85,11 @@ class Cn31ManifestController extends Controller
             'bags.*.bag_number.required' => __('api.validation.bag_number_required'),
             'bags.*.bag_number.distinct' => __('api.validation.bag_number_distinct'),
             'bags.*.bag_number.unique' => __('api.validation.bag_number_unique'),
-            'bags.*.dispatch_number_bag.regex' => 'The bag dispatch number must contain only digits.',
-            'bags.*.dispatch_number_bag.distinct' => 'The bag dispatch number must not be repeated.',
-            'bags.*.dispatch_number_bag.unique' => 'The bag dispatch number has already been registered.',
-            'dispatch_number_manifest.regex' => 'The manifest dispatch number must contain exactly 10 digits.',
-            'dispatch_number_manifest.unique' => 'The manifest dispatch number has already been registered.',
+            'bags.*.dispatch_number_bag.regex' => __('api.validation.dispatch_number_bag_format'),
+            'bags.*.dispatch_number_bag.distinct' => __('api.validation.dispatch_number_bag_distinct'),
+            'bags.*.dispatch_number_bag.unique' => __('api.validation.dispatch_number_bag_unique'),
+            'dispatch_number_manifest.regex' => __('api.validation.dispatch_number_manifest_format'),
+            'dispatch_number_manifest.unique' => __('api.validation.dispatch_number_manifest_unique'),
             'bags.*.package_count.required' => __('api.validation.package_count_required'),
             'bags.*.package_count.integer' => __('api.validation.package_count_integer'),
             'bags.*.total_weight_kg.required' => __('api.validation.bag_total_weight_required'),
@@ -151,6 +152,7 @@ class Cn31ManifestController extends Controller
                 'cn31_number' => $manifest->cn31_number,
                 'dispatch_number_manifest' => $manifest->dispatch_number_manifest,
                 'status' => $manifest->status,
+                'status_label' => PackageStatusCatalog::labelForStatus($manifest->status),
                 'total_bags' => $manifest->total_bags,
                 'total_packages' => $manifest->total_packages,
                 'total_weight_kg' => (float) $manifest->total_weight_kg,
@@ -161,6 +163,7 @@ class Cn31ManifestController extends Controller
                     'declared_package_count' => $bag->declared_package_count,
                     'declared_weight_kg' => (float) $bag->declared_weight_kg,
                     'status' => $bag->status,
+                    'status_label' => PackageStatusCatalog::labelForStatus($bag->status),
                 ])->values(),
             ],
         ], 201);
@@ -193,6 +196,7 @@ class Cn31ManifestController extends Controller
                 'destination_office' => $manifest->destination_office,
                 'dispatch_date' => $manifest->dispatch_date?->toIso8601String(),
                 'status' => $manifest->status,
+                'status_label' => PackageStatusCatalog::labelForStatus($manifest->status),
                 'total_bags' => $manifest->total_bags,
                 'total_packages' => $manifest->total_packages,
                 'total_weight_kg' => (float) $manifest->total_weight_kg,
@@ -206,6 +210,7 @@ class Cn31ManifestController extends Controller
                     'loaded_weight_kg' => (float) $bag->cn33Packages->sum('weight_kg'),
                     'documented_packages' => $bag->cn33Packages->where('status', 'documentado_cn22')->count(),
                     'status' => $bag->status,
+                    'status_label' => PackageStatusCatalog::labelForStatus($bag->status),
                 ])->values(),
             ],
         ]);

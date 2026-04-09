@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\ApiToken;
+use App\Http\Middleware\SetCompanyLocale;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -36,7 +37,7 @@ class AuthenticateApiToken
         }
 
         $apiToken->touchLastUsed();
-        App::setLocale($apiToken->company?->locale ?? 'es');
+        App::setLocale(SetCompanyLocale::resolveLocale($request, $apiToken->company?->locale));
         $request->attributes->set('currentCompany', $apiToken->company);
         $request->attributes->set('currentApiToken', $apiToken);
         $request->attributes->set('currentAuthMode', 'legacy_token');

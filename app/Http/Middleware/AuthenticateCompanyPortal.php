@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\User;
+use App\Http\Middleware\SetCompanyLocale;
 use Closure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\App;
@@ -39,7 +40,7 @@ class AuthenticateCompanyPortal
             ], Response::HTTP_UNAUTHORIZED);
         }
 
-        App::setLocale($user->company?->locale ?? 'es');
+        App::setLocale(SetCompanyLocale::resolveLocale($request, $user->company?->locale));
         $request->attributes->set('companyPortalUser', $user);
         $request->attributes->set('companyPortalSessionToken', $bearerToken);
 

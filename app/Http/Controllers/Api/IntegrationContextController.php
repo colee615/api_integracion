@@ -31,6 +31,12 @@ class IntegrationContextController extends Controller
                     'used_shipments' => $company->sandbox_shipments_used,
                 ],
                 'supported_statuses' => PackageStatusCatalog::allowedStatuses(),
+                'supported_status_catalog' => collect(PackageStatusCatalog::allowedStatuses())
+                    ->map(fn (string $status) => [
+                        'code' => $status,
+                        'label' => PackageStatusCatalog::labelForStatus($status),
+                    ])
+                    ->values(),
                 'supported_webhook_events' => PackageStatusCatalog::webhookEvents(),
             ],
         ]);

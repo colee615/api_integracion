@@ -9,6 +9,7 @@ use App\Models\Cn31Manifest;
 use App\Models\Cn33Package;
 use App\Models\Package;
 use App\Models\PackageMovement;
+use App\Support\PackageStatusCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -96,24 +97,24 @@ class DashboardController extends Controller
         if ($legacyTokens->filter(fn ($token) => $token->canUse())->isEmpty()) {
             $alerts->push([
                 'level' => 'warning',
-                'title' => 'Sin credencial activa',
-                'description' => 'No existe ningun token activo para consumir las APIs de integracion.',
+                'title' => __('api.portal.alerts.no_active_token_title'),
+                'description' => __('api.portal.alerts.no_active_token_description'),
             ]);
         }
 
         if ($observedBagsCount > 0) {
             $alerts->push([
                 'level' => 'danger',
-                'title' => 'Sacas observadas',
-                'description' => "Tienes {$observedBagsCount} saca(s) con diferencia entre lo declarado y lo cargado.",
+                'title' => __('api.portal.alerts.observed_bags_title'),
+                'description' => __('api.portal.alerts.observed_bags_description', ['count' => $observedBagsCount]),
             ]);
         }
 
         if ($pendingCn22Count > 0) {
             $alerts->push([
                 'level' => 'info',
-                'title' => 'CN22 pendiente',
-                'description' => "Existen {$pendingCn22Count} paquete(s) declarados en CN33 que aun no tienen CN22.",
+                'title' => __('api.portal.alerts.pending_cn22_title'),
+                'description' => __('api.portal.alerts.pending_cn22_description', ['count' => $pendingCn22Count]),
             ]);
         }
 
@@ -186,6 +187,7 @@ class DashboardController extends Controller
                         'total_packages' => $manifest->total_packages,
                         'total_weight_kg' => (float) $manifest->total_weight_kg,
                         'status' => $manifest->status,
+                        'status_label' => PackageStatusCatalog::labelForStatus($manifest->status),
                         'delivered_at' => $manifest->meta['delivered_at'] ?? null,
                     ])
                     ->values(),
@@ -206,6 +208,7 @@ class DashboardController extends Controller
                         'loaded_weight_kg' => (float) ($bag->meta['loaded_weight_kg'] ?? 0),
                         'documented_packages' => Cn33Package::where('cn31_bag_id', $bag->id)->whereHas('package')->count(),
                         'status' => $bag->status,
+                        'status_label' => PackageStatusCatalog::labelForStatus($bag->status),
                         'delivered_at' => $bag->meta['delivered_at'] ?? null,
                     ])
                     ->values(),
@@ -221,6 +224,7 @@ class DashboardController extends Controller
                         'location' => $movement->location,
                         'description' => $movement->description,
                         'tracking_code' => $movement->package?->tracking_code,
+                        'status_label' => PackageStatusCatalog::labelForStatus($movement->status),
                     ])
                     ->values(),
                 'recent_packages' => Package::query()
@@ -257,6 +261,7 @@ class DashboardController extends Controller
                         'value_fob_usd' => $package->value_fob_usd !== null ? (float) $package->value_fob_usd : null,
                         'currency_code' => $package->currency_code,
                         'status' => $package->status,
+                        'status_label' => PackageStatusCatalog::labelForStatus($package->status),
                         'manifest_number' => $package->meta['cn31_number'] ?? null,
                         'bag_number' => $package->meta['bag_number'] ?? null,
                         'dispatch_number_bag' => $package->meta['dispatch_number_bag'] ?? null,
@@ -267,6 +272,7 @@ class DashboardController extends Controller
                         'movements' => $package->movements->map(fn ($movement) => [
                             'id' => $movement->id,
                             'status' => $movement->status,
+                            'status_label' => PackageStatusCatalog::labelForStatus($movement->status),
                             'location' => $movement->location,
                             'description' => $movement->description,
                         ])->values(),
@@ -291,6 +297,7 @@ class DashboardController extends Controller
                         'total_packages' => $manifest->total_packages,
                         'total_weight_kg' => (float) $manifest->total_weight_kg,
                         'status' => $manifest->status,
+                        'status_label' => PackageStatusCatalog::labelForStatus($manifest->status),
                         'delivered_at' => $manifest->meta['delivered_at'] ?? null,
                         'bags' => $manifest->bags->map(fn ($bag) => [
                             'id' => $bag->id,
@@ -305,6 +312,7 @@ class DashboardController extends Controller
                             'package_difference' => (int) ($bag->meta['package_difference'] ?? 0),
                             'weight_difference_kg' => (float) ($bag->meta['weight_difference_kg'] ?? 0),
                             'dispatch_note' => $bag->meta['dispatch_note'] ?? null,
+                            'status_label' => PackageStatusCatalog::labelForStatus($bag->status),
                             'packages' => $bag->cn33Packages->map(fn ($cn33Package) => [
                                 'id' => $cn33Package->id,
                                 'tracking_code' => $cn33Package->tracking_code,
@@ -312,6 +320,7 @@ class DashboardController extends Controller
                                 'destination' => $cn33Package->destination,
                                 'weight_kg' => (float) $cn33Package->weight_kg,
                                 'status' => $cn33Package->status,
+                                'status_label' => PackageStatusCatalog::labelForStatus($cn33Package->status),
                                 'delivered_at' => $cn33Package->meta['delivered_at'] ?? null,
                                 'notes' => $cn33Package->meta['notes'] ?? null,
                                 'package' => $cn33Package->package ? [
@@ -343,11 +352,13 @@ class DashboardController extends Controller
                                         ? (float) $cn33Package->package->value_fob_usd
                                         : null,
                                     'currency_code' => $cn33Package->package->currency_code,
+                                    'status_label' => PackageStatusCatalog::labelForStatus($cn33Package->package->status),
                                     'customs_items' => $cn33Package->package->customs_items ?? [],
                                     'delivered_at' => $cn33Package->package->meta['delivered_at'] ?? null,
                                     'movements' => $cn33Package->package->movements->map(fn ($movement) => [
                                         'id' => $movement->id,
                                         'status' => $movement->status,
+                                        'status_label' => PackageStatusCatalog::labelForStatus($movement->status),
                                         'location' => $movement->location,
                                         'description' => $movement->description,
                                     ])->values(),
@@ -366,6 +377,9 @@ class DashboardController extends Controller
                         'expires_at' => $token->expires_at?->toIso8601String(),
                         'last_used_at' => $token->last_used_at?->toIso8601String(),
                         'status' => $token->revoked_at ? 'revocado' : ($token->isExpired() ? 'expirado' : (! $token->hasStarted() ? 'programado' : 'activo')),
+                        'status_label' => __(
+                            'api.statuses.'.($token->revoked_at ? 'revocado' : ($token->isExpired() ? 'expirado' : (! $token->hasStarted() ? 'programado' : 'activo')))
+                        ),
                     ])->values(),
                 ],
             ],

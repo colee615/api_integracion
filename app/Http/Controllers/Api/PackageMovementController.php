@@ -20,6 +20,7 @@ class PackageMovementController extends Controller
             'data' => $package->movements()->get()->map(fn ($movement) => [
                 'id' => $movement->id,
                 'status' => $movement->status,
+                'status_label' => PackageStatusCatalog::labelForStatus($movement->status),
                 'location' => $movement->location,
                 'description' => $movement->description,
                 'occurred_at' => $movement->occurred_at?->toIso8601String(),
@@ -66,6 +67,7 @@ class PackageMovementController extends Controller
             'data' => [
                 'id' => $movement->id,
                 'status' => $movement->status,
+                'status_label' => PackageStatusCatalog::labelForStatus($movement->status),
                 'location' => $movement->location,
                 'description' => $movement->description,
                 'occurred_at' => $movement->occurred_at?->toIso8601String(),

@@ -37,6 +37,7 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
         Route::get('/companies', [CompanyController::class, 'index'])->name('companies.index');
         Route::post('/companies', [CompanyController::class, 'store'])->name('companies.store');
         Route::get('/companies/{company}', [CompanyController::class, 'show'])->name('companies.show');
+        Route::delete('/companies/{company}', [CompanyController::class, 'destroy'])->name('companies.destroy');
         Route::patch('/companies/{company}/settings', [CompanyController::class, 'updateSettings'])->name('companies.settings');
         Route::patch('/companies/{company}/status', [CompanyController::class, 'updateStatus'])->name('companies.status');
         Route::patch('/companies/{company}/locale', [CompanyController::class, 'updateLocale'])->name('companies.locale');

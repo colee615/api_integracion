@@ -7,6 +7,7 @@ use App\Models\Cn31Bag;
 use App\Models\Cn31Manifest;
 use App\Models\Package;
 use App\Services\WebhookNotifier;
+use App\Support\PackageStatusCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -36,7 +37,7 @@ class InternalPackageDeliveryController extends Controller
                 'company_id' => $package->company_id,
                 'status' => 'entregado',
                 'location' => $validated['location'] ?? null,
-                'description' => $validated['description'] ?? 'Paquete entregado mediante API interna.',
+                'description' => $validated['description'] ?? __('api.messages.package_delivered_internal'),
                 'occurred_at' => $occurredAt,
                 'meta' => array_merge($validated['meta'] ?? [], [
                     'source' => 'internal_delivery_api',
@@ -114,19 +115,22 @@ class InternalPackageDeliveryController extends Controller
         $package->load('cn33Package.bag.manifest');
 
         return response()->json([
-            'message' => 'Package marked as delivered successfully.',
+            'message' => __('api.messages.package_delivered_success'),
             'data' => [
                 'tracking_code' => $package->tracking_code,
                 'status' => $package->status,
+                'status_label' => PackageStatusCatalog::labelForStatus($package->status),
                 'delivered_at' => $occurredAt->toIso8601String(),
                 'bag' => $package->cn33Package?->bag ? [
                     'bag_number' => $package->cn33Package->bag->bag_number,
                     'status' => $package->cn33Package->bag->status,
+                    'status_label' => PackageStatusCatalog::labelForStatus($package->cn33Package->bag->status),
                     'delivered_at' => $package->cn33Package->bag->meta['delivered_at'] ?? null,
                 ] : null,
                 'manifest' => $package->cn33Package?->bag?->manifest ? [
                     'cn31_number' => $package->cn33Package->bag->manifest->cn31_number,
                     'status' => $package->cn33Package->bag->manifest->status,
+                    'status_label' => PackageStatusCatalog::labelForStatus($package->cn33Package->bag->manifest->status),
                     'delivered_at' => $package->cn33Package->bag->manifest->meta['delivered_at'] ?? null,
                 ] : null,
             ],

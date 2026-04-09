@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cn31Bag;
 use App\Models\Cn33Package;
 use App\Models\Package;
+use App\Support\PackageStatusCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
@@ -128,6 +129,7 @@ class Cn33BagController extends Controller
                 'dispatch_number_bag' => $bag->dispatch_number_bag,
                 'manifest_number' => $bag->manifest?->cn31_number,
                 'status' => $bag->status,
+                'status_label' => PackageStatusCatalog::labelForStatus($bag->status),
                 'declared_package_count' => $bag->declared_package_count,
                 'loaded_package_count' => $loadedPackages,
                 'declared_weight_kg' => (float) $bag->declared_weight_kg,
@@ -168,6 +170,7 @@ class Cn33BagController extends Controller
                 'declared_package_count' => $bag->declared_package_count,
                 'declared_weight_kg' => (float) $bag->declared_weight_kg,
                 'status' => $bag->status,
+                'status_label' => PackageStatusCatalog::labelForStatus($bag->status),
                 'packages' => $bag->cn33Packages->map(fn ($item) => [
                     'id' => $item->id,
                     'tracking_code' => $item->tracking_code,
@@ -175,6 +178,7 @@ class Cn33BagController extends Controller
                     'destination' => $item->destination,
                     'weight_kg' => $item->weight_kg !== null ? (float) $item->weight_kg : null,
                     'status' => $item->status,
+                    'status_label' => PackageStatusCatalog::labelForStatus($item->status),
                     'package_registered' => $item->package_id !== null,
                 ])->values(),
             ],

@@ -57,15 +57,13 @@ class PackageStatusCatalog
 
     public static function labelForStatus(string $status): string
     {
-        return match (self::normalize($status)) {
-            'pre_alerta_recibida' => 'Pre-alerta recibida',
-            'recibido_centro_clasificacion' => 'Recibido en centro de clasificacion',
-            'en_proceso_aduana' => 'En proceso de aduana',
-            'liberado_aduana' => 'Liberado por aduana',
-            'en_ruta_entrega' => 'En ruta de entrega',
-            'entregado' => 'Entregado',
-            'incidencia_entrega' => 'Incidencia de entrega',
-            default => ucfirst(str_replace('_', ' ', $status)),
-        };
+        $normalized = self::normalize($status);
+        $translated = __('api.statuses.'.$normalized);
+
+        if ($translated !== 'api.statuses.'.$normalized) {
+            return $translated;
+        }
+
+        return ucfirst(str_replace('_', ' ', $normalized));
     }
 }

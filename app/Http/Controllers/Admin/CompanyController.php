@@ -26,7 +26,7 @@ class CompanyController extends Controller
             'apiTokens' => fn ($query) => $query->latest(),
             'user',
         ])
-            ->withCount(['packages', 'movements'])
+            ->withCount(['packages', 'movements', 'apiTokens', 'cn31Manifests', 'cn31Bags', 'cn33Packages'])
             ->latest()
             ->get();
 
@@ -252,6 +252,44 @@ class CompanyController extends Controller
                 ? 'Sesiones de empresa cerradas correctamente.'
                 : 'No habia sesiones activas para cerrar.'
         );
+    }
+
+    public function destroy(Company $company): RedirectResponse
+    {
+        $operationalSummary = [
+            'packages' => Package::where('company_id', $company->id)->count(),
+            'movements' => PackageMovement::where('company_id', $company->id)->count(),
+            'cn33_packages' => Cn33Package::where('company_id', $company->id)->count(),
+            'bags' => Cn31Bag::where('company_id', $company->id)->count(),
+            'manifests' => Cn31Manifest::where('company_id', $company->id)->count(),
+        ];
+
+        if (array_sum($operationalSummary) > 0) {
+            return back()->with('company_delete_error', [
+                'company' => $company->name,
+                'message' => 'No se puede eliminar esta empresa porque ya tiene carga operativa registrada.',
+                'summary' => $operationalSummary,
+            ]);
+        }
+
+        DB::transaction(function () use ($company): void {
+            if ($company->user) {
+                $this->revokeCompanyPortalSessions($company->user->id);
+
+                DB::table(config('session.table', 'sessions'))
+                    ->where('user_id', $company->user->id)
+                    ->delete();
+
+                $company->user->delete();
+            }
+
+            $company->apiTokens()->delete();
+            $company->delete();
+        });
+
+        return redirect()
+            ->route('admin.companies.index')
+            ->with('status', 'Empresa eliminada correctamente.');
     }
 
     /**
