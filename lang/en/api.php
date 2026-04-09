@@ -103,7 +103,7 @@ return [
         'bag_number_required' => 'Bag number is required.',
         'bag_number_distinct' => 'Duplicate bags are not allowed in the same CN31.',
         'bag_number_unique' => 'The bag number already exists for this company.',
-        'dispatch_number_bag_format' => 'The bag dispatch number must contain only digits.',
+        'dispatch_number_bag_format' => 'The bag dispatch number must be alphanumeric.',
         'dispatch_number_bag_distinct' => 'The bag dispatch number must not be repeated.',
         'dispatch_number_bag_unique' => 'The bag dispatch number has already been registered.',
         'dispatch_number_manifest_format' => 'The manifest dispatch number must contain exactly 10 digits.',

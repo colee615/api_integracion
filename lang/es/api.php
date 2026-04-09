@@ -103,7 +103,7 @@ return [
         'bag_number_required' => 'El numero de saca es obligatorio.',
         'bag_number_distinct' => 'No se permiten sacas duplicadas en el mismo CN31.',
         'bag_number_unique' => 'El numero de saca ya existe para esta empresa.',
-        'dispatch_number_bag_format' => 'El numero de despacho de la saca debe contener solo digitos.',
+        'dispatch_number_bag_format' => 'El numero de despacho de la saca debe ser alfanumerico.',
         'dispatch_number_bag_distinct' => 'El numero de despacho de la saca no debe repetirse.',
         'dispatch_number_bag_unique' => 'El numero de despacho de la saca ya fue registrado.',
         'dispatch_number_manifest_format' => 'El numero de despacho del manifiesto debe contener exactamente 10 digitos.',

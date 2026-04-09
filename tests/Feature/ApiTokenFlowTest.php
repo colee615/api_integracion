@@ -478,6 +478,53 @@ class ApiTokenFlowTest extends TestCase
         ]);
     }
 
+    public function test_cn31_accepts_alphanumeric_dispatch_number_bag(): void
+    {
+        $company = Company::create([
+            'name' => 'Empresa Alfanumerica',
+            'slug' => 'empresa-alfanumerica',
+            'status' => 'active',
+        ]);
+
+        [, $plainTextToken] = ApiToken::issue(
+            $company,
+            'Token Alfanumerico',
+            now()->subMinute(),
+            now()->addDays(30)
+        );
+
+        $headers = [
+            'Authorization' => 'Bearer '.$plainTextToken,
+            'Accept' => 'application/json',
+        ];
+
+        $this->postJson('/api/v1/cn31/manifests', [
+            'cn31_number' => 'CN31-ALFA-001',
+            'dispatch_number_manifest' => '0000000001',
+            'origin_office' => 'SHANGHAI',
+            'destination_office' => 'LA PAZ',
+            'dispatch_date' => '2026-04-08 09:30:00',
+            'bags' => [
+                [
+                    'bag_number' => 'CD00021',
+                    'dispatch_number_bag' => 'CD00021',
+                    'package_count' => 3,
+                    'total_weight_kg' => 2.150,
+                    'dispatch_note' => 'Pre-alerta inicial desde China para Bolivia',
+                ],
+            ],
+        ], $headers)
+            ->assertCreated()
+            ->assertJsonPath('data.dispatch_number_manifest', '0000000001')
+            ->assertJsonPath('data.bags.0.dispatch_number_bag', 'CD00021');
+
+        $this->assertDatabaseHas('cn31_bags', [
+            'company_id' => $company->id,
+            'bag_number' => 'CD00021',
+            'dispatch_number_bag' => 'CD00021',
+        ]);
+    }
+
     public function test_company_can_register_cn31_cn33_and_cn22_in_one_bulk_request(): void
     {
         $company = Company::create([

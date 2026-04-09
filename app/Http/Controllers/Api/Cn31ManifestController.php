@@ -64,7 +64,8 @@ class Cn31ManifestController extends Controller
             ],
             'bags.*.dispatch_number_bag' => [
                 'nullable',
-                'regex:/^[0-9]{1,20}$/',
+                'string',
+                'max:30',
                 'distinct',
                 Rule::unique('cn31_bags', 'dispatch_number_bag')->where(
                     fn ($query) => $query->where('company_id', $company->id)
@@ -85,7 +86,6 @@ class Cn31ManifestController extends Controller
             'bags.*.bag_number.required' => __('api.validation.bag_number_required'),
             'bags.*.bag_number.distinct' => __('api.validation.bag_number_distinct'),
             'bags.*.bag_number.unique' => __('api.validation.bag_number_unique'),
-            'bags.*.dispatch_number_bag.regex' => __('api.validation.dispatch_number_bag_format'),
             'bags.*.dispatch_number_bag.distinct' => __('api.validation.dispatch_number_bag_distinct'),
             'bags.*.dispatch_number_bag.unique' => __('api.validation.dispatch_number_bag_unique'),
             'dispatch_number_manifest.regex' => __('api.validation.dispatch_number_manifest_format'),

@@ -55,7 +55,8 @@ class BulkIntegrationController extends Controller
             ],
             'manifest.bags.*.dispatch_number_bag' => [
                 'nullable',
-                'regex:/^[0-9]{1,20}$/',
+                'string',
+                'max:30',
                 'distinct',
                 Rule::unique('cn31_bags', 'dispatch_number_bag')->where(
                     fn ($query) => $query->where('company_id', $company->id)
@@ -123,7 +124,7 @@ class BulkIntegrationController extends Controller
             'manifest.bags.*.bag_number.required' => __('api.validation.bag_number_required'),
             'manifest.bags.*.bag_number.distinct' => __('api.validation.bag_number_distinct'),
             'manifest.bags.*.bag_number.unique' => __('api.validation.bag_number_unique'),
-            'manifest.bags.*.dispatch_number_bag.regex' => 'The bag dispatch number must contain only digits.',
+            'manifest.bags.*.dispatch_number_bag.string' => __('api.validation.dispatch_number_bag_format'),
             'manifest.bags.*.dispatch_number_bag.distinct' => 'The bag dispatch number must not be repeated.',
             'manifest.bags.*.dispatch_number_bag.unique' => 'The bag dispatch number has already been registered.',
             'manifest.dispatch_number_manifest.regex' => 'The manifest dispatch number must contain exactly 10 digits.',
