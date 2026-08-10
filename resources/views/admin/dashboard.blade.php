@@ -10,11 +10,11 @@
         }
 
         .interactive-row:hover {
-            background: #f3f8ff !important;
+            background: #f2f7ff !important;
         }
 
         .interactive-row.is-active {
-            background: #eef4fb !important;
+            background: #eaf2ff !important;
         }
 
         .interactive-trigger {
@@ -23,19 +23,20 @@
             justify-content: center;
             gap: .45rem;
             padding: .45rem .8rem;
-            border: 1px solid #d8e1eb;
-            border-radius: .7rem;
-            background: #fff;
-            color: #1d4f91;
+            border: 1px solid #d7e3f7;
+            border-radius: .8rem;
+            background: #ffffff;
+            color: #1c4db8;
             font-size: .8rem;
             font-weight: 700;
             white-space: nowrap;
+            box-shadow: 0 10px 20px rgba(19, 56, 168, 0.06);
         }
 
         .modal-panel {
-            border: 1px solid #e2e8f0;
-            border-radius: .9rem;
-            background: #f8fbfd;
+            border: 1px solid #d7e3f7;
+            border-radius: 1rem;
+            background: #ffffff;
             padding: 1rem;
             margin-bottom: 1rem;
         }
@@ -251,9 +252,9 @@
 
         .calendar-year-title {
             margin: 0;
-            font-size: 1.05rem;
+            font-size: 1.15rem;
             font-weight: 800;
-            color: #0f172a;
+            color: #16316f;
         }
 
         .calendar-year-actions {
@@ -268,10 +269,10 @@
             justify-content: center;
             min-width: 2.4rem;
             height: 2.4rem;
-            border: 1px solid #d8e1eb;
+            border: 1px solid #d7e3f7;
             border-radius: .8rem;
-            background: #fff;
-            color: #1d4f91;
+            background: linear-gradient(180deg, #ffffff 0%, #f6faff 100%);
+            color: #1c4db8;
             font-weight: 800;
             text-decoration: none;
         }
@@ -279,16 +280,18 @@
         .calendar-year-chip {
             padding: .55rem .9rem;
             border-radius: .8rem;
-            background: #eef4fb;
-            color: #0f172a;
+            background: #edf4ff;
+            color: #16316f;
             font-weight: 800;
+            border: 1px solid #d7e3f7;
         }
 
         .calendar-month {
-            border: 1px solid #d8e1eb;
+            border: 1px solid #d7e3f7;
             border-radius: 1rem;
-            background: #fff;
-            padding: .9rem;
+            background: #ffffff;
+            padding: 1rem;
+            box-shadow: 0 12px 26px rgba(19, 56, 168, 0.05);
         }
 
         .calendar-month-title {
@@ -297,13 +300,38 @@
             font-weight: 800;
             text-transform: uppercase;
             letter-spacing: .08em;
-            color: #355273;
+            color: #4f72b8;
         }
 
         .calendar-months-grid {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
             gap: 1rem;
+        }
+
+        .calendar-weekdays,
+        .calendar-days {
+            display: grid;
+            grid-template-columns: repeat(7, minmax(0, 1fr));
+            gap: .35rem;
+        }
+
+        .calendar-weekdays {
+            margin-bottom: .45rem;
+        }
+
+        .calendar-weekday {
+            display: inline-flex;
+            justify-content: center;
+            color: #6d89c0;
+            font-size: .74rem;
+            font-weight: 800;
+            text-transform: uppercase;
+        }
+
+        .calendar-day-empty {
+            min-width: 2.4rem;
+            height: 2.4rem;
         }
 
         .calendar-day-link {
@@ -313,9 +341,9 @@
             min-width: 2.4rem;
             height: 2.4rem;
             padding: 0 .55rem;
-            border: 1px solid #edf2f7;
-            background: #f8fbfd;
-            color: #0f172a;
+            border: 1px solid #e1eaf8;
+            background: #ffffff;
+            color: #16316f;
             font-size: .85rem;
             font-weight: 700;
             text-decoration: none;
@@ -323,27 +351,27 @@
         }
 
         .calendar-day-link:hover {
-            background: #eef4fb;
-            border-color: #cbd9e8;
-            color: #1d4f91;
+            background: #f5f9ff;
+            border-color: #cddcf6;
+            color: #1c4db8;
         }
 
         .calendar-day-link.is-today {
-            border-color: #93c5fd;
-            color: #1d4f91;
+            border-color: #9cbcff;
+            color: #1c4db8;
         }
 
         .calendar-day-link.has-records {
-            border-color: #fca5a5;
-            background: #fff1f2;
-            color: #b42318;
+            border-color: #d7e3f7;
+            background: #f6faff;
+            color: #1f4fb8;
         }
 
         .calendar-day-link.is-selected {
-            background: #d92d20;
-            border-color: #d92d20;
+            background: linear-gradient(180deg, #1f57db 0%, #123faa 100%);
+            border-color: #1f57db;
             color: #fff;
-            box-shadow: 0 10px 24px rgba(217, 45, 32, .18);
+            box-shadow: 0 12px 24px rgba(19, 56, 168, .18);
         }
 
         @media (max-width: 767.98px) {
@@ -375,6 +403,7 @@
         <section class="page-hero">
             <span class="page-kicker"><i class="fas fa-chart-line"></i> Centro de control</span>
             <h1 class="page-title">Panel operativo</h1>
+            <p class="page-subtitle">Seguimiento centralizado de pre-alertas CN31, sacas declaradas y paquetes anunciados.</p>
         </section>
     </div>
 @stop

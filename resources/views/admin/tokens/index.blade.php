@@ -15,13 +15,6 @@
 
 @section('content')
     <div class="page-shell">
-        @if (session('new_token'))
-            <x-adminlte-alert theme="success" title="Token generado" dismissable class="panel-card">
-                <p class="mb-2">Empresa: {{ session('new_token.company') }} | Nombre: {{ session('new_token.name') }}</p>
-                <code style="word-break: break-all;">{{ session('new_token.token') }}</code>
-            </x-adminlte-alert>
-        @endif
-
         <div class="row">
             <div class="col-md-4">
                 <x-adminlte-card title="Emitir token" theme="light" icon="fas fa-key" class="panel-card form-zone">
@@ -244,6 +237,47 @@ document.addEventListener('DOMContentLoaded', function () {
     tokenViewCopyButton?.addEventListener('click', async function () {
         await navigator.clipboard.writeText(tokenViewSecretField.value);
     });
+
+    @if (session('new_token'))
+        if (window.Swal) {
+            window.Swal.fire({
+                title: 'Token generado',
+                width: 760,
+                padding: '2.2rem 2rem 1.8rem',
+                background: '#ffffff',
+                confirmButtonText: 'Entendido',
+                confirmButtonColor: '#1f4fb8',
+                customClass: {
+                    popup: 'corp-swal-popup',
+                    title: 'corp-swal-title',
+                    confirmButton: 'corp-swal-confirm'
+                },
+                html: `
+                    <div style="display:flex;flex-direction:column;gap:18px;text-align:left;">
+                        <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;border:1px solid #d9e4f5;border-radius:18px;background:linear-gradient(180deg,#f8fbff 0%,#eef4ff 100%);">
+                            <div style="width:58px;height:58px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:#1f4fb8;color:#fff;font-size:24px;font-weight:800;">#</div>
+                            <div>
+                                <div style="font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:#6b87bd;font-weight:800;">Nuevo token de integración</div>
+                                <div style="font-size:18px;font-weight:800;color:#173f9f;">{{ session('new_token.name') }}</div>
+                                <div style="margin-top:2px;color:#5a7bbd;">Empresa: {{ session('new_token.company') }}</div>
+                            </div>
+                        </div>
+                        <div>
+                            <label style="display:block;margin-bottom:8px;font-weight:800;color:#173f9f;">Token</label>
+                            <textarea readonly style="width:100%;min-height:120px;padding:14px 16px;border:1px solid #d9e4f5;border-radius:16px;background:#f8fbff;color:#163f9d;resize:none;line-height:1.5;">{{ session('new_token.token') }}</textarea>
+                            <p style="margin:12px 0 0;color:#5a7bbd;font-size:.94rem;line-height:1.5;">Usa este valor en <code>Authorization: Bearer {token}</code>. Guarda este dato de forma segura antes de continuar.</p>
+                        </div>
+                    </div>
+                `,
+                showClass: {
+                    popup: 'animate__animated animate__fadeInDown animate__faster'
+                },
+                hideClass: {
+                    popup: 'animate__animated animate__fadeOutUp animate__faster'
+                }
+            });
+        }
+    @endif
 });
 </script>
 @stop

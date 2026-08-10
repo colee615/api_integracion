@@ -63,12 +63,12 @@ return [
     |
     */
 
-    'logo' => '<b>Integracion</b>',
-    'logo_img' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
-    'logo_img_class' => 'brand-image img-circle elevation-3',
+    'logo' => '<span class="brand-text">Integracion</span>',
+    'logo_img' => 'http://correos.gob.bo/frontstorage/cms/theme/CNOoA5H41DHjoZ4YmlAMyHqNHNeSpKwd5nrr7Lze.png',
+    'logo_img_class' => 'brand-image elevation-0',
     'logo_img_xl' => null,
     'logo_img_xl_class' => 'brand-image-xs',
-    'logo_img_alt' => 'Admin Logo',
+    'logo_img_alt' => 'Correos de Bolivia',
 
     /*
     |--------------------------------------------------------------------------

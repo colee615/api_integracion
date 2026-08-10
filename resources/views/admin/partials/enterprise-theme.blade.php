@@ -1,46 +1,74 @@
 <style>
     :root {
-        --corp-navy: #0f172a;
-        --corp-slate: #334155;
-        --corp-ink: #1e293b;
-        --corp-border: #dbe4ee;
-        --corp-soft: #f4f7fb;
+        --corp-navy: #1f4fb8;
+        --corp-slate: #5677bb;
+        --corp-ink: #163f9d;
+        --corp-border: #d9e4f5;
+        --corp-soft: #f6f9fe;
         --corp-panel: #ffffff;
-        --corp-accent: #0f766e;
-        --corp-gold: #b98900;
+        --corp-accent: #fecc36;
+        --corp-gold: #fecc36;
     }
 
     body:not(.login-page) .content-wrapper {
-        background:
-            radial-gradient(circle at top right, rgba(15, 118, 110, 0.08), transparent 20%),
-            linear-gradient(180deg, #f7f9fc 0%, #eef3f8 100%);
+        background: #ffffff;
     }
 
     .sidebar-corporate {
-        background:
-            linear-gradient(180deg, #112031 0%, #18324a 18%, #153851 52%, #102938 100%) !important;
+        background: #fecc36 !important;
+        box-shadow: none !important;
+    }
+
+    .main-sidebar,
+    .main-sidebar::before {
+        box-shadow: none !important;
     }
 
     .sidebar-brand-corporate {
-        background:
-            linear-gradient(90deg, #0b2036 0%, #143b63 60%, #0f766e 100%) !important;
-        border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+        background: #fecc36 !important;
+        border-bottom: 1px solid rgba(31, 79, 184, 0.14);
     }
 
     .sidebar-dark .brand-link,
     .sidebar-corporate .brand-link {
-        color: #f8fbff !important;
+        color: #173f9f !important;
         font-weight: 700;
         letter-spacing: -.01em;
-        padding-top: 1rem;
-        padding-bottom: 1rem;
+        padding: .8rem 1rem;
     }
 
     .sidebar-corporate .brand-image,
     .sidebar-brand-corporate .brand-image {
-        border: 2px solid rgba(255, 255, 255, 0.22);
-        background: rgba(255, 255, 255, 0.14);
-        padding: .15rem;
+        border: 0;
+        background: transparent;
+        padding: 0;
+        box-shadow: none;
+    }
+
+    .sidebar-brand-corporate.brand-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 0;
+        padding-left: .75rem;
+        padding-right: .75rem;
+    }
+
+    .sidebar-brand-corporate.brand-link img {
+        height: 42px;
+        width: auto;
+        max-width: 150px;
+        object-fit: contain;
+        float: none !important;
+        margin: 0 !important;
+        position: static !important;
+        left: auto !important;
+        right: auto !important;
+    }
+
+    .sidebar-brand-corporate .brand-text,
+    .sidebar-brand-corporate.brand-link .brand-text {
+        display: none;
     }
 
     .sidebar-corporate .nav-sidebar > .nav-item {
@@ -49,28 +77,28 @@
 
     .sidebar-corporate .nav-sidebar > .nav-item > .nav-link {
         border-radius: .9rem;
-        color: rgba(255, 255, 255, 0.82);
+        color: rgba(23, 63, 159, 0.92);
         padding: .9rem 1rem;
-        font-weight: 600;
+        font-weight: 700;
         transition: all .18s ease;
     }
 
     .sidebar-corporate .nav-sidebar > .nav-item > .nav-link .nav-icon {
-        color: #8fd3ff;
+        color: #2052bc;
         margin-right: .55rem;
         font-size: 1rem;
     }
 
     .sidebar-corporate .nav-sidebar > .nav-item > .nav-link:hover {
-        background: rgba(255, 255, 255, 0.08);
-        color: #ffffff;
+        background: rgba(255, 255, 255, 0.35);
+        color: #143b99;
         transform: translateX(2px);
     }
 
     .sidebar-corporate .nav-sidebar > .nav-item > .nav-link.active {
-        background: linear-gradient(90deg, #1d4ed8 0%, #0f766e 100%);
+        background: linear-gradient(90deg, #1f4fb8 0%, #1841a0 100%);
         color: #ffffff;
-        box-shadow: 0 12px 24px rgba(15, 118, 110, 0.25);
+        box-shadow: none;
     }
 
     .sidebar-corporate .nav-sidebar > .nav-item > .nav-link.active .nav-icon {
@@ -93,6 +121,23 @@
         padding-bottom: .35rem;
     }
 
+    .main-header.navbar {
+        background: #fecc36;
+        border-bottom: 1px solid rgba(31, 79, 184, 0.14);
+        box-shadow: none;
+        backdrop-filter: blur(10px);
+    }
+
+    .main-header .nav-link,
+    .main-header .navbar-nav .nav-link {
+        color: #1f4fb8 !important;
+    }
+
+    .main-header .nav-link:hover,
+    .main-header .navbar-nav .nav-link:hover {
+        color: #143b99 !important;
+    }
+
     .page-shell {
         display: flex;
         flex-direction: column;
@@ -102,20 +147,23 @@
     .page-hero {
         position: relative;
         overflow: hidden;
-        border-radius: 1rem;
-        padding: 1.35rem 1.5rem;
-        background: linear-gradient(135deg, #0f172a 0%, #1e3a5f 58%, #0f766e 100%);
-        color: #fff;
-        box-shadow: 0 18px 45px rgba(15, 23, 42, 0.16);
+        border-radius: 1.35rem;
+        padding: 1.45rem 1.6rem;
+        background:
+            radial-gradient(circle at top right, rgba(31, 79, 184, 0.08), transparent 22%),
+            linear-gradient(135deg, #ffffff 0%, #f7faff 52%, #eef4ff 100%);
+        color: #173f9f;
+        border: 1px solid #d9e4f5;
+        box-shadow: 0 18px 45px rgba(20, 59, 153, 0.08);
     }
 
     .page-hero::after {
         content: "";
         position: absolute;
-        inset: auto -80px -90px auto;
-        width: 220px;
-        height: 220px;
-        background: rgba(255, 255, 255, 0.08);
+        inset: auto -70px -82px auto;
+        width: 210px;
+        height: 210px;
+        background: rgba(31, 79, 184, 0.08);
         border-radius: 999px;
     }
 
@@ -124,34 +172,36 @@
         align-items: center;
         gap: .45rem;
         padding: .3rem .7rem;
-        border: 1px solid rgba(255, 255, 255, 0.18);
+        border: 1px solid rgba(31, 79, 184, 0.16);
         border-radius: 999px;
         font-size: .78rem;
         letter-spacing: .08em;
         text-transform: uppercase;
-        color: rgba(255, 255, 255, 0.9);
+        color: #5476bc;
         margin-bottom: .75rem;
+        background: #ffffff;
     }
 
     .page-title {
         margin: 0;
-        font-size: 1.95rem;
-        font-weight: 700;
-        letter-spacing: -.02em;
+        font-size: 2.1rem;
+        font-weight: 800;
+        letter-spacing: -.03em;
     }
 
     .page-subtitle {
         margin: .45rem 0 0;
         max-width: 760px;
-        color: rgba(255, 255, 255, 0.82);
+        color: #5677bb;
         font-size: 1rem;
     }
 
     .metric-card {
         border: 0;
-        border-radius: 1rem;
-        background: linear-gradient(180deg, #ffffff 0%, #f8fbff 100%);
-        box-shadow: 0 12px 30px rgba(15, 23, 42, 0.08);
+        border-radius: 1.1rem;
+        background: #ffffff;
+        border: 1px solid #d9e4f5;
+        box-shadow: 0 14px 30px rgba(20, 59, 153, 0.06);
         overflow: hidden;
     }
 
@@ -165,8 +215,8 @@
     .metric-card .small-box .icon {
         top: 16px;
         right: 18px;
-        opacity: .18;
-        color: var(--corp-navy) !important;
+        opacity: .14;
+        color: #1f57db !important;
         font-size: 52px;
     }
 
@@ -176,7 +226,7 @@
     }
 
     .metric-card .small-box p {
-        color: #64748b;
+        color: #5f7fc2;
         font-weight: 600;
         text-transform: uppercase;
         letter-spacing: .06em;
@@ -185,24 +235,26 @@
 
     .panel-card.card {
         border: 1px solid var(--corp-border);
-        border-radius: 1rem;
-        box-shadow: 0 12px 34px rgba(15, 23, 42, 0.08);
+        border-radius: 1.15rem;
+        box-shadow: 0 14px 34px rgba(20, 59, 153, 0.06);
         overflow: hidden;
     }
 
     .panel-card .card-header {
-        border-bottom: 1px solid #e8eef5;
-        background: linear-gradient(180deg, #ffffff 0%, #f8fbfe 100%);
+        border-bottom: 1px solid #e2ebf8;
+        background: #ffffff;
         padding: 1rem 1.15rem;
     }
 
     .panel-card .card-title {
         font-weight: 700;
         letter-spacing: -.01em;
+        color: #173f9f;
     }
 
     .panel-card .card-body {
         padding: 1.15rem;
+        background: #ffffff;
     }
 
     .form-zone {
@@ -252,9 +304,9 @@
 
     .corp-table thead th {
         border-top: 0;
-        border-bottom: 1px solid #d8e1eb;
-        background: #f8fbfd;
-        color: #475569;
+        border-bottom: 1px solid #d8e4f5;
+        background: #f7faff;
+        color: #5e7ebf;
         font-size: .76rem;
         text-transform: uppercase;
         letter-spacing: .06em;
@@ -268,7 +320,7 @@
     }
 
     .corp-table tbody tr:hover {
-        background: #fbfdff;
+        background: #f8fbff;
     }
 
     .detail-chip {
@@ -280,17 +332,17 @@
         border-radius: 999px;
         font-size: .76rem;
         font-weight: 700;
-        background: #eef4fb;
-        color: #274c77;
-        border: 1px solid #d8e4f0;
+        background: #edf4ff;
+        color: #1f4fb8;
+        border: 1px solid #d7e3f7;
     }
 
     .section-note {
         padding: .85rem 1rem;
         border-radius: .9rem;
-        background: #f7fafc;
-        border: 1px solid #e2e8f0;
-        color: #475569;
+        background: #f8fbff;
+        border: 1px solid #d9e4f5;
+        color: #5a7bbd;
     }
 
     .token-cell .input-group-text,
@@ -462,8 +514,36 @@
     }
 
     .main-footer {
-        background: #fff;
-        border-top: 1px solid #e2e8f0;
-        color: #64748b;
+        background: rgba(255, 255, 255, 0.96);
+        border-top: 1px solid #d9e4f5;
+        color: #5b7bbd;
+    }
+
+    .swal2-popup.corp-swal-popup {
+        border-radius: 26px !important;
+        border: 1px solid #d9e4f5 !important;
+        box-shadow: 0 24px 60px rgba(20, 59, 153, 0.16) !important;
+    }
+
+    .swal2-title.corp-swal-title {
+        color: #173f9f !important;
+        font-size: 2rem !important;
+        font-weight: 800 !important;
+        letter-spacing: -.03em !important;
+        margin-bottom: .5rem !important;
+    }
+
+    .swal2-confirm.corp-swal-confirm {
+        min-width: 170px;
+        min-height: 50px;
+        border-radius: 14px !important;
+        border: 0 !important;
+        box-shadow: 0 14px 28px rgba(31, 79, 184, 0.2) !important;
+        font-weight: 700 !important;
+        font-size: 1rem !important;
+    }
+
+    .swal2-confirm.corp-swal-confirm:focus {
+        box-shadow: 0 0 0 .2rem rgba(31, 79, 184, 0.14), 0 14px 28px rgba(31, 79, 184, 0.2) !important;
     }
 </style>
