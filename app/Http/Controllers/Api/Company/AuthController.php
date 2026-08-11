@@ -16,13 +16,28 @@ class AuthController extends Controller
     public function login(Request $request): JsonResponse
     {
         $validated = $request->validate([
-            'email' => ['required', 'email'],
+            'alias' => ['nullable', 'string', 'max:255'],
+            'email' => ['nullable', 'email'],
             'password' => ['required', 'string'],
         ]);
 
+        $identifier = trim((string) ($validated['alias'] ?? $validated['email'] ?? ''));
+
+        if ($identifier === '') {
+            return response()->json([
+                'message' => __('api.errors.invalid_credentials'),
+                'errors' => [
+                    'alias' => [__('api.errors.invalid_credentials')],
+                ],
+            ], 422);
+        }
+
         $user = User::with('company')
-            ->where('email', $validated['email'])
             ->where('role', 'company')
+            ->where(function ($query) use ($identifier) {
+                $query->where('username', $identifier)
+                    ->orWhere('email', $identifier);
+            })
             ->first();
 
         if (! $user || ! Hash::check($validated['password'], $user->password)) {
@@ -55,6 +70,7 @@ class AuthController extends Controller
                 'token' => $token,
                 'user' => [
                     'name' => $user->name,
+                    'alias' => $user->username,
                     'email' => $user->email,
                     'role' => 'empresa',
                 ],
@@ -78,6 +94,7 @@ class AuthController extends Controller
                 'user' => [
                     'id' => $user->id,
                     'name' => $user->name,
+                    'alias' => $user->username,
                     'email' => $user->email,
                     'last_login_at' => $user->last_login_at?->toIso8601String(),
                 ],
@@ -87,9 +104,7 @@ class AuthController extends Controller
                     'slug' => $user->company?->slug,
                     'status' => $user->company?->status,
                     'locale' => $user->company?->locale ?? 'es',
-                    'contact_name' => $user->company?->contact_name,
                     'contact_email' => $user->company?->contact_email,
-                    'contact_phone' => $user->company?->contact_phone,
                 ],
             ],
         ]);

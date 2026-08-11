@@ -149,30 +149,26 @@ class CompanyController extends Controller
     {
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:255'],
-            'slug' => ['nullable', 'string', 'max:255', Rule::unique('companies', 'slug')],
-            'contact_name' => ['nullable', 'string', 'max:255'],
             'contact_email' => ['nullable', 'email', 'max:255'],
-            'contact_phone' => ['nullable', 'string', 'max:50'],
             'status' => ['required', Rule::in(['active', 'inactive'])],
             'locale' => ['required', Rule::in(['es', 'en'])],
-            'login_email' => ['required', 'email', 'max:255', Rule::unique('users', 'email')],
+            'login_alias' => ['required', 'string', 'max:255', 'regex:/^[A-Za-z0-9._-]+$/', Rule::unique('users', 'username')],
             'login_password' => ['required', 'string', 'min:8', 'max:255'],
         ]);
 
         DB::transaction(function () use ($validated): void {
             $company = Company::create([
                 'name' => $validated['name'],
-                'slug' => $validated['slug'] ?: Str::slug($validated['name']),
-                'contact_name' => $validated['contact_name'] ?? null,
+                'slug' => $this->generateUniqueSlug($validated['name']),
                 'contact_email' => $validated['contact_email'] ?? null,
-                'contact_phone' => $validated['contact_phone'] ?? null,
                 'status' => $validated['status'],
                 'locale' => $validated['locale'],
             ]);
 
             User::create([
                 'name' => $validated['name'],
-                'email' => $validated['login_email'],
+                'email' => $this->generateUniquePortalEmail($validated['login_alias']),
+                'username' => Str::lower($validated['login_alias']),
                 'password' => $validated['login_password'],
                 'role' => 'company',
                 'company_id' => $company->id,
@@ -292,6 +288,35 @@ class CompanyController extends Controller
         return redirect()
             ->route('admin.companies.index')
             ->with('status', 'Empresa eliminada correctamente.');
+    }
+
+    private function generateUniqueSlug(string $name): string
+    {
+        $baseSlug = Str::slug($name);
+        $slug = $baseSlug !== '' ? $baseSlug : 'empresa';
+        $suffix = 1;
+
+        while (Company::where('slug', $slug)->exists()) {
+            $suffix++;
+            $slug = $baseSlug !== '' ? "{$baseSlug}-{$suffix}" : "empresa-{$suffix}";
+        }
+
+        return $slug;
+    }
+
+    private function generateUniquePortalEmail(string $alias): string
+    {
+        $base = Str::lower($alias);
+        $base = preg_replace('/[^a-z0-9._-]/', '', $base) ?: 'empresa';
+        $email = $base.'@portal.local';
+        $suffix = 1;
+
+        while (User::where('email', $email)->exists()) {
+            $suffix++;
+            $email = $base.'-'.$suffix.'@portal.local';
+        }
+
+        return $email;
     }
 
     /**

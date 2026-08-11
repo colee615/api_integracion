@@ -41,6 +41,7 @@ class CompanyPortalApiAuthTest extends TestCase
         User::create([
             'name' => 'Portal API',
             'email' => 'portal-api@empresa.test',
+            'username' => 'portal-api',
             'password' => '123456789',
             'role' => 'company',
             'status' => 'active',
@@ -48,7 +49,7 @@ class CompanyPortalApiAuthTest extends TestCase
         ]);
 
         $loginResponse = $this->postJson('/api/v1/company/auth/login', [
-            'email' => 'portal-api@empresa.test',
+            'alias' => 'portal-api',
             'password' => '123456789',
         ])->assertOk()
             ->assertJsonPath('message', 'Login successful.');
@@ -89,6 +90,7 @@ class CompanyPortalApiAuthTest extends TestCase
         User::create([
             'name' => 'Empresa Tokens Legacy',
             'email' => 'empresa-tokens-legacy@test.local',
+            'username' => 'empresa-tokens-legacy',
             'password' => '123456789',
             'role' => 'company',
             'status' => 'active',
@@ -121,7 +123,7 @@ class CompanyPortalApiAuthTest extends TestCase
         ]);
 
         $loginResponse = $this->postJson('/api/v1/company/auth/login', [
-            'email' => 'empresa-tokens-legacy@test.local',
+            'alias' => 'empresa-tokens-legacy',
             'password' => '123456789',
         ])->assertOk();
 
@@ -154,6 +156,7 @@ class CompanyPortalApiAuthTest extends TestCase
         User::create([
             'name' => 'Empresa Uno',
             'email' => 'empresa-uno@test.local',
+            'username' => 'empresa-uno',
             'password' => '123456789',
             'role' => 'company',
             'status' => 'active',
@@ -163,6 +166,7 @@ class CompanyPortalApiAuthTest extends TestCase
         User::create([
             'name' => 'Empresa Dos',
             'email' => 'empresa-dos@test.local',
+            'username' => 'empresa-dos',
             'password' => '123456789',
             'role' => 'company',
             'status' => 'active',
@@ -256,7 +260,7 @@ class CompanyPortalApiAuthTest extends TestCase
         );
 
         $loginResponse = $this->postJson('/api/v1/company/auth/login', [
-            'email' => 'empresa-uno@test.local',
+            'alias' => 'empresa-uno',
             'password' => '123456789',
         ])->assertOk();
 
@@ -292,6 +296,7 @@ class CompanyPortalApiAuthTest extends TestCase
         User::create([
             'name' => 'Empresa Password',
             'email' => 'empresa-password@test.local',
+            'username' => 'empresa-password',
             'password' => '123456789',
             'role' => 'company',
             'status' => 'active',
@@ -299,7 +304,7 @@ class CompanyPortalApiAuthTest extends TestCase
         ]);
 
         $loginResponse = $this->postJson('/api/v1/company/auth/login', [
-            'email' => 'empresa-password@test.local',
+            'alias' => 'empresa-password',
             'password' => '123456789',
         ])->assertOk();
 
@@ -321,7 +326,7 @@ class CompanyPortalApiAuthTest extends TestCase
         ]);
 
         $this->postJson('/api/v1/company/auth/login', [
-            'email' => 'empresa-password@test.local',
+            'alias' => 'empresa-password',
             'password' => '987654321',
         ])->assertOk();
     }
@@ -338,6 +343,7 @@ class CompanyPortalApiAuthTest extends TestCase
         User::create([
             'name' => 'Portal EN',
             'email' => 'portal-en@test.local',
+            'username' => 'portal-en',
             'password' => '123456789',
             'role' => 'company',
             'status' => 'active',
@@ -345,7 +351,7 @@ class CompanyPortalApiAuthTest extends TestCase
         ]);
 
         $loginResponse = $this->postJson('/api/v1/company/auth/login', [
-            'email' => 'portal-en@test.local',
+            'alias' => 'portal-en',
             'password' => '123456789',
         ])->assertOk()
             ->assertJsonPath('message', 'Login successful.');

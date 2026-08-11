@@ -114,16 +114,13 @@
             <div class="col-md-4">
                 <x-adminlte-card title="Alta de empresa" theme="light" icon="fas fa-plus-circle" class="panel-card form-zone">
                     <div class="section-note mb-3">
-                        Registra una nueva empresa cliente con sus datos de contacto, credenciales base de acceso e idioma operativo del portal.
+                        Registra una nueva empresa cliente con sus credenciales base de acceso e idioma operativo del portal.
                     </div>
 
                     <form method="POST" action="{{ route('admin.companies.store') }}">
                         @csrf
                         <x-adminlte-input name="name" label="Nombre comercial" value="{{ old('name') }}" required />
-                        <x-adminlte-input name="slug" label="Slug corporativo" value="{{ old('slug') }}" placeholder="empresa-demo" />
-                        <x-adminlte-input name="contact_name" label="Responsable de contacto" value="{{ old('contact_name') }}" />
                         <x-adminlte-input name="contact_email" type="email" label="Correo de contacto" value="{{ old('contact_email') }}" />
-                        <x-adminlte-input name="contact_phone" label="Telefono" value="{{ old('contact_phone') }}" />
                         <x-adminlte-select name="status" label="Estado de servicio">
                             <option value="active">Activa</option>
                             <option value="inactive">Inactiva</option>
@@ -133,7 +130,7 @@
                             <option value="en" @selected(old('locale') === 'en')>English</option>
                         </x-adminlte-select>
                         <hr>
-                        <x-adminlte-input name="login_email" type="email" label="Correo de acceso empresa" value="{{ old('login_email') }}" required />
+                        <x-adminlte-input name="login_alias" label="Alias de acceso empresa" value="{{ old('login_alias') }}" placeholder="360lions" required />
                         <x-adminlte-input name="login_password" type="text" label="Contrasena inicial empresa" value="{{ old('login_password') }}" required />
                         <x-adminlte-button type="submit" theme="primary" label="Guardar empresa" icon="fas fa-save" class="table-style-submit"/>
                     </form>
@@ -147,7 +144,7 @@
                             <thead>
                                 <tr>
                                     <th>Empresa</th>
-                                    <th>Correo</th>
+                                    <th>Alias</th>
                                     <th>Idioma</th>
                                     <th>Estado</th>
                                     <th>Ultimo ingreso</th>
@@ -160,11 +157,10 @@
                                     <tr>
                                         <td>
                                             <strong>{{ $company->name }}</strong><br>
-                                            <small class="text-muted">{{ $company->slug }}</small><br>
-                                            <small class="text-muted">Contacto: {{ $company->contact_name ?: 'Sin dato' }}</small>
+                                            <small class="text-muted">{{ $company->contact_email ?: 'Sin correo de contacto' }}</small>
                                         </td>
                                         <td>
-                                            <strong>{{ $company->user?->email ?? 'Sin usuario' }}</strong>
+                                            <strong>{{ $company->user?->username ?? 'Sin usuario' }}</strong>
                                         </td>
                                         <td>
                                             <span class="badge badge-light company-locale-badge">

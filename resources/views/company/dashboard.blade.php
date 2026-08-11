@@ -25,9 +25,8 @@
         <div class="card">
             <h2 style="margin-top: 0;">Perfil empresarial</h2>
             <p><strong>Nombre:</strong> {{ $company->name }}</p>
-            <p><strong>Slug:</strong> {{ $company->slug }}</p>
             <p><strong>Estado:</strong> {{ $company->status }}</p>
-            <p><strong>Correo portal:</strong> {{ auth()->user()->email }}</p>
+            <p><strong>Alias portal:</strong> {{ auth()->user()->username ?? 'Sin alias' }}</p>
             <p><strong>Ultimo ingreso:</strong> {{ auth()->user()->last_login_at?->format('Y-m-d H:i') ?? 'Primer ingreso' }}</p>
             <p><strong>Tokens de integracion:</strong> {{ $company->apiTokens->count() }}</p>
         </div>
