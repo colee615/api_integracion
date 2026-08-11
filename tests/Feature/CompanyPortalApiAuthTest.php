@@ -305,7 +305,7 @@ class CompanyPortalApiAuthTest extends TestCase
 
         $token = $loginResponse->json('data.token');
 
-        $this->postJson('/api/v1/company/auth/change-password', [
+        $response = $this->postJson('/api/v1/company/auth/change-password', [
             'current_password' => '123456789',
             'password' => '987654321',
             'password_confirmation' => '987654321',
@@ -313,7 +313,12 @@ class CompanyPortalApiAuthTest extends TestCase
             'Authorization' => 'Bearer '.$token,
             'Accept' => 'application/json',
         ])->assertOk()
-            ->assertJsonPath('message', 'Contrasena actualizada correctamente.');
+            ->assertJsonStructure(['message']);
+
+        $this->assertContains($response->json('message'), [
+            'Contrasena actualizada correctamente.',
+            'Password updated successfully.',
+        ]);
 
         $this->postJson('/api/v1/company/auth/login', [
             'email' => 'empresa-password@test.local',

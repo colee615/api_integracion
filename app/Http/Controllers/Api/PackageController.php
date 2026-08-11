@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
 use App\Models\Package;
+use App\Support\ApiTokenContext;
 use App\Support\PackageStatusCatalog;
 use App\Support\PackageTrackingCode;
 use Illuminate\Http\JsonResponse;
@@ -15,9 +16,12 @@ class PackageController extends Controller
     public function index(Request $request): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
-        $packages = Package::query()
-            ->where('company_id', $company->id)
+        $packages = ApiTokenContext::scopeToToken(
+            Package::query()->where('company_id', $company->id),
+            $apiToken
+        )
             ->when($request->string('tracking_code')->isNotEmpty(), function ($query) use ($request) {
                 $query->where('tracking_code', $request->string('tracking_code'));
             })
@@ -30,6 +34,7 @@ class PackageController extends Controller
     public function store(Request $request): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
         $validated = $request->validate([
             'tracking_code' => [
@@ -42,7 +47,7 @@ class PackageController extends Controller
                     }
                 },
                 Rule::unique('packages', 'tracking_code')->where(
-                    fn ($query) => $query->where('company_id', $company->id)
+                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
             ],
             'reference' => ['nullable', 'string', 'max:100'],
@@ -85,6 +90,7 @@ class PackageController extends Controller
         $package = Package::create([
             ...$validated,
             'company_id' => $company->id,
+            ...ApiTokenContext::ownershipAttributes($apiToken),
             'status' => $validated['status'] ?? 'registrado',
             'registered_at' => $validated['registered_at'] ?? now(),
             'last_movement_at' => $validated['registered_at'] ?? now(),
@@ -99,9 +105,12 @@ class PackageController extends Controller
     public function show(Request $request, string $trackingCode): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
-        $package = Package::with('movements')
-            ->where('company_id', $company->id)
+        $package = ApiTokenContext::scopeToToken(
+            Package::with('movements')->where('company_id', $company->id),
+            $apiToken
+        )
             ->where('tracking_code', $trackingCode)
             ->firstOrFail();
 

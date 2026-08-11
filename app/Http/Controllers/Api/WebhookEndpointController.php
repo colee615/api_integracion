@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\WebhookEndpoint;
 use App\Models\Package;
 use App\Services\WebhookNotifier;
+use App\Support\ApiTokenContext;
 use App\Support\PackageStatusCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -18,10 +19,14 @@ class WebhookEndpointController extends Controller
     public function index(Request $request): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
-        $endpoints = WebhookEndpoint::query()
-            ->with(['deliveries' => fn ($query) => $query->latest()->limit(5)])
-            ->where('company_id', $company->id)
+        $endpoints = ApiTokenContext::scopeToToken(
+            WebhookEndpoint::query()
+                ->with(['deliveries' => fn ($query) => $query->latest()->limit(5)])
+                ->where('company_id', $company->id),
+            $apiToken
+        )
             ->latest()
             ->get();
 
@@ -49,6 +54,7 @@ class WebhookEndpointController extends Controller
     public function store(Request $request): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
         $validated = $request->validate([
             'name' => ['required', 'string', 'max:120'],
@@ -61,6 +67,7 @@ class WebhookEndpointController extends Controller
 
         $endpoint = WebhookEndpoint::create([
             'company_id' => $company->id,
+            ...ApiTokenContext::ownershipAttributes($apiToken),
             'name' => $validated['name'],
             'target_url' => $validated['target_url'],
             'events' => $validated['events'],
@@ -84,8 +91,10 @@ class WebhookEndpointController extends Controller
     public function test(Request $request, WebhookEndpoint $webhookEndpoint, WebhookNotifier $notifier): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
         abort_unless($webhookEndpoint->company_id === $company->id, 404);
+        abort_unless($webhookEndpoint->created_by_api_token_id === ($apiToken?->isTrial() ? $apiToken->id : null), 404);
 
         $validator = Validator::make($request->all(), [
             'tracking_code' => ['required', 'string'],
@@ -99,8 +108,10 @@ class WebhookEndpointController extends Controller
             ], 422);
         }
 
-        $package = Package::query()
-            ->where('company_id', $company->id)
+        $package = ApiTokenContext::scopeToToken(
+            Package::query()->where('company_id', $company->id),
+            $apiToken
+        )
             ->where('tracking_code', $request->string('tracking_code'))
             ->firstOrFail();
 

@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\FormatsIntegrationResponses;
 use App\Http\Controllers\Controller;
 use App\Models\Cn33Package;
 use App\Models\Package;
+use App\Support\ApiTokenContext;
 use App\Support\PackageTrackingCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -20,6 +21,7 @@ class Cn22ShipmentController extends Controller
     public function store(Request $request): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
         $validator = Validator::make($request->all(), [
             'records' => ['required', 'array', 'min:1'],
@@ -34,7 +36,7 @@ class Cn22ShipmentController extends Controller
                 },
                 'distinct',
                 Rule::unique('packages', 'tracking_code')->where(
-                    fn ($query) => $query->where('company_id', $company->id)
+                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
             ],
             'records.*.origin_office' => ['required', 'string', 'max:150'],
@@ -151,7 +153,7 @@ class Cn22ShipmentController extends Controller
 
         $createdPackages = collect();
 
-        DB::transaction(function () use ($validated, $company, $createdPackages, $recordCount): void {
+        DB::transaction(function () use ($validated, $company, $apiToken, $createdPackages, $recordCount): void {
             foreach ($validated['records'] as $record) {
                 $registeredAt = $record['shipment_date'] ?? now();
                 $grossWeightGrams = (int) $record['gross_weight_grams'];
@@ -160,11 +162,13 @@ class Cn22ShipmentController extends Controller
                 $cn33Item = Cn33Package::query()
                     ->with(['bag.manifest'])
                     ->where('company_id', $company->id)
+                    ->when($apiToken !== null, fn ($query) => ApiTokenContext::scopeToToken($query, $apiToken))
                     ->where('tracking_code', $record['tracking_code'])
                     ->first();
 
                 $package = Package::create([
                     'company_id' => $company->id,
+                    ...ApiTokenContext::ownershipAttributes($apiToken),
                     'tracking_code' => $record['tracking_code'],
                     'sender_name' => $record['sender_name'],
                     'sender_country' => $record['sender_country'],
@@ -245,6 +249,7 @@ class Cn22ShipmentController extends Controller
 
                 $package->movements()->create([
                     'company_id' => $company->id,
+                    ...ApiTokenContext::ownershipAttributes($apiToken),
                     'status' => 'pre_alerta_recibida',
                     'location' => $record['origin_office'],
                     'description' => __('api.messages.cn22_pre_alert_received'),

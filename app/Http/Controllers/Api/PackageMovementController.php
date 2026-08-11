@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Package;
 use App\Services\WebhookNotifier;
+use App\Support\ApiTokenContext;
 use App\Support\PackageStatusCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -32,6 +33,7 @@ class PackageMovementController extends Controller
     public function store(Request $request, string $trackingCode, WebhookNotifier $notifier): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
         $package = $this->resolvePackage($request, $trackingCode);
 
         $validated = $request->validate([
@@ -48,6 +50,7 @@ class PackageMovementController extends Controller
             ...$validated,
             'status' => $normalizedStatus,
             'company_id' => $company->id,
+            ...ApiTokenContext::ownershipAttributes($apiToken),
             'occurred_at' => $validated['occurred_at'] ?? now(),
         ]);
 
@@ -79,9 +82,12 @@ class PackageMovementController extends Controller
     private function resolvePackage(Request $request, string $trackingCode): Package
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
-        return Package::query()
-            ->where('company_id', $company->id)
+        return ApiTokenContext::scopeToToken(
+            Package::query()->where('company_id', $company->id),
+            $apiToken
+        )
             ->where('tracking_code', $trackingCode)
             ->firstOrFail();
     }

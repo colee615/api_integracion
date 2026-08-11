@@ -12,6 +12,7 @@ class PackageMovement extends Model
 
     protected $fillable = [
         'company_id',
+        'created_by_api_token_id',
         'package_id',
         'status',
         'location',

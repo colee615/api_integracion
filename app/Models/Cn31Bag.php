@@ -13,6 +13,7 @@ class Cn31Bag extends Model
 
     protected $fillable = [
         'company_id',
+        'created_by_api_token_id',
         'cn31_manifest_id',
         'bag_number',
         'dispatch_number_bag',

@@ -13,6 +13,7 @@ class WebhookDelivery extends Model
     protected $fillable = [
         'webhook_endpoint_id',
         'company_id',
+        'created_by_api_token_id',
         'event',
         'tracking_code',
         'response_status',

@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Api\Concerns\FormatsIntegrationResponses;
 use App\Http\Controllers\Controller;
 use App\Models\Cn31Manifest;
+use App\Support\ApiTokenContext;
 use App\Support\PackageStatusCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -19,10 +20,12 @@ class Cn31ManifestController extends Controller
     public function index(Request $request): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
-        $manifests = Cn31Manifest::query()
-            ->withCount('bags')
-            ->where('company_id', $company->id)
+        $manifests = ApiTokenContext::scopeToToken(
+            Cn31Manifest::query()->withCount('bags')->where('company_id', $company->id),
+            $apiToken
+        )
             ->latest('dispatch_date')
             ->paginate(20);
 
@@ -32,6 +35,7 @@ class Cn31ManifestController extends Controller
     public function store(Request $request): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
         $validator = Validator::make($request->all(), [
             'cn31_number' => [
@@ -39,14 +43,14 @@ class Cn31ManifestController extends Controller
                 'string',
                 'max:100',
                 Rule::unique('cn31_manifests', 'cn31_number')->where(
-                    fn ($query) => $query->where('company_id', $company->id)
+                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
             ],
             'dispatch_number_manifest' => [
                 'nullable',
                 'regex:/^[0-9]{10}$/',
                 Rule::unique('cn31_manifests', 'dispatch_number_manifest')->where(
-                    fn ($query) => $query->where('company_id', $company->id)
+                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
             ],
             'origin_office' => ['required', 'string', 'max:150'],
@@ -59,7 +63,7 @@ class Cn31ManifestController extends Controller
                 'max:100',
                 'distinct',
                 Rule::unique('cn31_bags', 'bag_number')->where(
-                    fn ($query) => $query->where('company_id', $company->id)
+                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
             ],
             'bags.*.dispatch_number_bag' => [
@@ -68,7 +72,7 @@ class Cn31ManifestController extends Controller
                 'max:30',
                 'distinct',
                 Rule::unique('cn31_bags', 'dispatch_number_bag')->where(
-                    fn ($query) => $query->where('company_id', $company->id)
+                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
             ],
             'bags.*.package_count' => ['required', 'integer', 'min:1'],
@@ -108,9 +112,10 @@ class Cn31ManifestController extends Controller
         $validated = $validator->validated();
         $manifest = null;
 
-        DB::transaction(function () use ($validated, $company, &$manifest): void {
+        DB::transaction(function () use ($validated, $company, $apiToken, &$manifest): void {
             $manifest = Cn31Manifest::create([
                 'company_id' => $company->id,
+                ...ApiTokenContext::ownershipAttributes($apiToken),
                 'cn31_number' => $validated['cn31_number'],
                 'dispatch_number_manifest' => $validated['dispatch_number_manifest'] ?? null,
                 'origin_office' => $validated['origin_office'],
@@ -129,6 +134,7 @@ class Cn31ManifestController extends Controller
             foreach ($validated['bags'] as $bag) {
                 $manifest->bags()->create([
                     'company_id' => $company->id,
+                    ...ApiTokenContext::ownershipAttributes($apiToken),
                     'bag_number' => $bag['bag_number'],
                     'dispatch_number_bag' => $bag['dispatch_number_bag'] ?? null,
                     'declared_package_count' => $bag['package_count'],
@@ -172,10 +178,12 @@ class Cn31ManifestController extends Controller
     public function show(Request $request, string $cn31Number): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
-        $manifest = Cn31Manifest::query()
-            ->with(['bags.cn33Packages'])
-            ->where('company_id', $company->id)
+        $manifest = ApiTokenContext::scopeToToken(
+            Cn31Manifest::query()->with(['bags.cn33Packages'])->where('company_id', $company->id),
+            $apiToken
+        )
             ->where('cn31_number', $cn31Number)
             ->first();
 

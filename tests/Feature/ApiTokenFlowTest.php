@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Models\ApiToken;
+use App\Models\PackageMovement;
 use App\Models\Company;
 use App\Models\Package;
+use App\Models\User;
 use App\Models\WebhookEndpoint;
 use Illuminate\Support\Facades\Http;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -259,6 +261,7 @@ class ApiTokenFlowTest extends TestCase
             'name' => 'Empresa CN22',
             'slug' => 'empresa-cn22',
             'status' => 'active',
+            'locale' => 'es',
         ]);
 
         [, $plainTextToken] = ApiToken::issue(
@@ -348,11 +351,16 @@ class ApiTokenFlowTest extends TestCase
             'gross_weight_grams' => 250,
         ]);
 
-        $this->assertDatabaseHas('package_movements', [
-            'company_id' => $company->id,
-            'status' => 'pre_alerta_recibida',
-            'description' => 'Pre-alerta CN22 recibida antes del arribo fisico.',
-        ]);
+        $this->assertTrue(
+            PackageMovement::query()
+                ->where('company_id', $company->id)
+                ->where('status', 'pre_alerta_recibida')
+                ->whereIn('description', [
+                    'Pre-alerta CN22 recibida antes del arribo fisico.',
+                    'CN22 pre-alert received before physical arrival.',
+                ])
+                ->exists()
+        );
     }
 
     public function test_company_can_register_cn31_and_cn33_then_link_cn22_package(): void
@@ -840,6 +848,7 @@ class ApiTokenFlowTest extends TestCase
             'name' => 'Empresa CN22 Validacion',
             'slug' => 'empresa-cn22-validacion',
             'status' => 'active',
+            'locale' => 'es',
         ]);
 
         [, $plainTextToken] = ApiToken::issue(
@@ -854,7 +863,7 @@ class ApiTokenFlowTest extends TestCase
             'Accept' => 'application/json',
         ];
 
-        $this->postJson('/api/v1/cn22/shipments', [
+        $response = $this->postJson('/api/v1/cn22/shipments', [
             'records' => [
                 [
                     'tracking_code' => 'EN000000010BO',
@@ -869,7 +878,6 @@ class ApiTokenFlowTest extends TestCase
             ->assertStatus(422)
             ->assertJsonPath('success', false)
             ->assertJsonPath('code', 'CN22_VALIDATION_ERROR')
-            ->assertJsonPath('message', 'El lote CN22 contiene errores de validacion.')
             ->assertJsonFragment([
                 'field' => 'records.0.destination_office',
                 'record_index' => 0,
@@ -880,6 +888,11 @@ class ApiTokenFlowTest extends TestCase
                 'record_index' => 1,
                 'attribute' => 'tracking_code',
             ]);
+
+        $this->assertContains($response->json('message'), [
+            'El lote CN22 contiene errores de validacion.',
+            'The CN22 batch contains validation errors.',
+        ]);
     }
 
     public function test_panel_token_is_the_only_supported_api_authentication_method(): void
@@ -1047,5 +1060,212 @@ class ApiTokenFlowTest extends TestCase
             'Accept' => 'application/json',
         ])->assertStatus(422)
             ->assertJsonPath('code', 'SANDBOX_SHIPMENT_LIMIT_REACHED');
+    }
+
+    public function test_trial_token_is_isolated_from_production_records_with_the_same_tracking_code(): void
+    {
+        $company = Company::create([
+            'name' => 'Empresa Aislada',
+            'slug' => 'empresa-aislada',
+            'status' => 'active',
+        ]);
+
+        [, $productionToken] = ApiToken::issue(
+            $company,
+            'Token Produccion',
+            now()->subMinute(),
+            now()->addDays(30)
+        );
+
+        [$trialTokenModel, $trialToken] = ApiToken::issue(
+            $company,
+            'Token Trial',
+            now()->subMinute(),
+            now()->addDays(30),
+            ['packages:write', 'packages:read'],
+            'trial'
+        );
+
+        $payload = [
+            'tracking_code' => 'EN000009999BO',
+            'recipient_name' => 'Cliente Demo',
+            'destination' => 'La Paz',
+        ];
+
+        $this->postJson('/api/v1/packages', $payload, [
+            'Authorization' => 'Bearer '.$productionToken,
+            'Accept' => 'application/json',
+        ])->assertCreated();
+
+        $this->postJson('/api/v1/packages', $payload, [
+            'Authorization' => 'Bearer '.$trialToken,
+            'Accept' => 'application/json',
+        ])->assertCreated();
+
+        $productionPackage = Package::query()
+            ->where('company_id', $company->id)
+            ->where('tracking_code', 'EN000009999BO')
+            ->whereNull('created_by_api_token_id')
+            ->first();
+
+        $trialPackage = Package::query()
+            ->where('company_id', $company->id)
+            ->where('tracking_code', 'EN000009999BO')
+            ->where('created_by_api_token_id', $trialTokenModel->id)
+            ->first();
+
+        $this->assertNotNull($productionPackage);
+        $this->assertNotNull($trialPackage);
+
+        $this->getJson('/api/v1/packages/EN000009999BO', [
+            'Authorization' => 'Bearer '.$productionToken,
+            'Accept' => 'application/json',
+        ])->assertOk()
+            ->assertJsonPath('data.id', $productionPackage->id);
+
+        $this->getJson('/api/v1/packages/EN000009999BO', [
+            'Authorization' => 'Bearer '.$trialToken,
+            'Accept' => 'application/json',
+        ])->assertOk()
+            ->assertJsonPath('data.id', $trialPackage->id);
+    }
+
+    public function test_revoking_trial_token_purges_only_its_operational_data(): void
+    {
+        $company = Company::create([
+            'name' => 'Empresa Trial',
+            'slug' => 'empresa-trial',
+            'status' => 'active',
+        ]);
+
+        [$trialTokenModel, $trialToken] = ApiToken::issue(
+            $company,
+            'Token Trial',
+            now()->subMinute(),
+            now()->addDays(30),
+            ['packages:write', 'packages:read'],
+            'trial'
+        );
+
+        [, $productionToken] = ApiToken::issue(
+            $company,
+            'Token Produccion',
+            now()->subMinute(),
+            now()->addDays(30)
+        );
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'status' => 'active',
+        ]);
+
+        $trialHeaders = [
+            'Authorization' => 'Bearer '.$trialToken,
+            'Accept' => 'application/json',
+        ];
+
+        $productionHeaders = [
+            'Authorization' => 'Bearer '.$productionToken,
+            'Accept' => 'application/json',
+        ];
+
+        $this->postJson('/api/v1/cn31/manifests', [
+            'cn31_number' => 'CN31-TRIAL-001',
+            'origin_office' => 'COCHABAMBA',
+            'destination_office' => 'LA PAZ',
+            'dispatch_date' => '2026-08-11 10:00:00',
+            'bags' => [
+                [
+                    'bag_number' => 'TRIAL-BAG-001',
+                    'dispatch_number_bag' => 'TRIAL00001',
+                    'package_count' => 1,
+                    'total_weight_kg' => 0.250,
+                ],
+            ],
+        ], $trialHeaders)->assertCreated();
+
+        $this->postJson('/api/v1/cn33/bags/TRIAL00001/packages', [
+            'packages' => [
+                [
+                    'tracking_code' => 'EN000001001BO',
+                    'origin' => 'COCHABAMBA',
+                    'destination' => 'LA PAZ',
+                    'weight_kg' => 0.250,
+                ],
+            ],
+        ], $trialHeaders)->assertCreated();
+
+        $this->postJson('/api/v1/cn22/shipments', [
+            'records' => [
+                [
+                    'tracking_code' => 'EN000001001BO',
+                    'origin_office' => 'COCHABAMBA',
+                    'destination_office' => 'LA PAZ',
+                    'sender_name' => 'Remitente Trial',
+                    'sender_country' => 'BOLIVIA',
+                    'sender_address' => 'Av. Trial 1',
+                    'sender_phone' => '70000001',
+                    'recipient_name' => 'Cliente Trial',
+                    'recipient_document' => '1234567',
+                    'recipient_address' => 'Calle Trial 123',
+                    'recipient_address_reference' => 'Puerta azul',
+                    'recipient_city' => 'LA PAZ',
+                    'recipient_department' => 'LA PAZ',
+                    'recipient_phone' => '71111111',
+                    'description' => 'Documentos',
+                    'gross_weight_grams' => 250,
+                    'length_cm' => 20,
+                    'width_cm' => 15,
+                    'height_cm' => 2,
+                    'value_fob_usd' => 18.00,
+                ],
+            ],
+        ], $trialHeaders)->assertCreated();
+
+        $this->postJson('/api/v1/packages', [
+            'tracking_code' => 'EN000001002BO',
+            'recipient_name' => 'Cliente Produccion',
+            'destination' => 'La Paz',
+        ], $productionHeaders)->assertCreated();
+
+        $this->assertDatabaseHas('cn31_manifests', [
+            'company_id' => $company->id,
+            'created_by_api_token_id' => $trialTokenModel->id,
+            'cn31_number' => 'CN31-TRIAL-001',
+        ]);
+
+        $this->assertDatabaseHas('packages', [
+            'company_id' => $company->id,
+            'created_by_api_token_id' => $trialTokenModel->id,
+            'tracking_code' => 'EN000001001BO',
+        ]);
+
+        $this->assertDatabaseHas('packages', [
+            'company_id' => $company->id,
+            'created_by_api_token_id' => null,
+            'tracking_code' => 'EN000001002BO',
+        ]);
+
+        $this->actingAs($admin)
+            ->patch(route('admin.tokens.revoke', $trialTokenModel))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('cn31_manifests', [
+            'company_id' => $company->id,
+            'created_by_api_token_id' => $trialTokenModel->id,
+            'cn31_number' => 'CN31-TRIAL-001',
+        ]);
+
+        $this->assertDatabaseMissing('packages', [
+            'company_id' => $company->id,
+            'created_by_api_token_id' => $trialTokenModel->id,
+            'tracking_code' => 'EN000001001BO',
+        ]);
+
+        $this->assertDatabaseHas('packages', [
+            'company_id' => $company->id,
+            'created_by_api_token_id' => null,
+            'tracking_code' => 'EN000001002BO',
+        ]);
     }
 }

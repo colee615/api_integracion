@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Cn31Bag;
 use App\Models\Cn33Package;
 use App\Models\Package;
+use App\Support\ApiTokenContext;
 use App\Support\PackageStatusCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -21,10 +22,12 @@ class Cn33BagController extends Controller
     public function store(Request $request, string $bagReference): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
-        $bag = Cn31Bag::query()
-            ->with('manifest')
-            ->where('company_id', $company->id)
+        $bag = ApiTokenContext::scopeToToken(
+            Cn31Bag::query()->with('manifest')->where('company_id', $company->id),
+            $apiToken
+        )
             ->where(function ($query) use ($bagReference) {
                 $query->where('dispatch_number_bag', $bagReference)
                     ->orWhere('bag_number', $bagReference);
@@ -46,7 +49,7 @@ class Cn33BagController extends Controller
                 'max:100',
                 'distinct',
                 Rule::unique('cn33_packages', 'tracking_code')->where(
-                    fn ($query) => $query->where('company_id', $company->id)
+                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
             ],
             'packages.*.origin' => ['required', 'string', 'max:255'],
@@ -76,10 +79,12 @@ class Cn33BagController extends Controller
 
         $validated = $validator->validated();
 
-        DB::transaction(function () use ($validated, $company, $bag): void {
+        DB::transaction(function () use ($validated, $company, $bag, $apiToken): void {
             foreach ($validated['packages'] as $index => $record) {
-                $package = Package::query()
-                    ->where('company_id', $company->id)
+                $package = ApiTokenContext::scopeToToken(
+                    Package::query()->where('company_id', $company->id),
+                    $apiToken
+                )
                     ->where('tracking_code', $record['tracking_code'])
                     ->first();
 
@@ -95,6 +100,7 @@ class Cn33BagController extends Controller
 
                 Cn33Package::create([
                     'company_id' => $company->id,
+                    ...ApiTokenContext::ownershipAttributes($apiToken),
                     'cn31_bag_id' => $bag->id,
                     'package_id' => $package?->id,
                     'tracking_code' => $record['tracking_code'],
@@ -143,10 +149,12 @@ class Cn33BagController extends Controller
     public function show(Request $request, string $bagReference): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
-        $bag = Cn31Bag::query()
-            ->with(['manifest', 'cn33Packages.package'])
-            ->where('company_id', $company->id)
+        $bag = ApiTokenContext::scopeToToken(
+            Cn31Bag::query()->with(['manifest', 'cn33Packages.package'])->where('company_id', $company->id),
+            $apiToken
+        )
             ->where(function ($query) use ($bagReference) {
                 $query->where('dispatch_number_bag', $bagReference)
                     ->orWhere('bag_number', $bagReference);

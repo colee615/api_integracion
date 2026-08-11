@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Package;
 use App\Models\WebhookEndpoint;
+use App\Support\ApiTokenContext;
 use App\Support\PackageStatusCatalog;
 use Illuminate\Support\Facades\Http;
 use Throwable;
@@ -49,9 +50,16 @@ class WebhookNotifier
             'context' => $context,
         ];
 
-        $endpoints = WebhookEndpoint::query()
-            ->where('company_id', $company->id)
-            ->where('is_active', true)
+        $packageToken = $package->created_by_api_token_id
+            ? $company->apiTokens()->find($package->created_by_api_token_id)
+            : null;
+
+        $endpoints = ApiTokenContext::scopeToToken(
+            WebhookEndpoint::query()
+                ->where('company_id', $company->id)
+                ->where('is_active', true),
+            $packageToken
+        )
             ->get()
             ->filter(function (WebhookEndpoint $endpoint) use ($event): bool {
                 $events = $endpoint->events ?? [];
@@ -62,6 +70,7 @@ class WebhookNotifier
         foreach ($endpoints as $endpoint) {
             $delivery = $endpoint->deliveries()->create([
                 'company_id' => $company->id,
+                'created_by_api_token_id' => $endpoint->created_by_api_token_id,
                 'event' => $event,
                 'tracking_code' => $package->tracking_code,
                 'payload' => $payload,

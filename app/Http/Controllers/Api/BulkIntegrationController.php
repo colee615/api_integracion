@@ -8,6 +8,7 @@ use App\Models\Cn31Bag;
 use App\Models\Cn31Manifest;
 use App\Models\Cn33Package;
 use App\Models\Package;
+use App\Support\ApiTokenContext;
 use App\Support\PackageTrackingCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,6 +23,7 @@ class BulkIntegrationController extends Controller
     public function store(Request $request): JsonResponse
     {
         $company = $request->attributes->get('currentCompany');
+        $apiToken = ApiTokenContext::currentToken($request);
 
         $validator = Validator::make($request->all(), [
             'manifest' => ['required', 'array'],
@@ -30,14 +32,14 @@ class BulkIntegrationController extends Controller
                 'string',
                 'max:100',
                 Rule::unique('cn31_manifests', 'cn31_number')->where(
-                    fn ($query) => $query->where('company_id', $company->id)
+                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
             ],
             'manifest.dispatch_number_manifest' => [
                 'nullable',
                 'regex:/^[0-9]{10}$/',
                 Rule::unique('cn31_manifests', 'dispatch_number_manifest')->where(
-                    fn ($query) => $query->where('company_id', $company->id)
+                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
             ],
             'manifest.origin_office' => ['required', 'string', 'max:150'],
@@ -50,7 +52,7 @@ class BulkIntegrationController extends Controller
                 'max:100',
                 'distinct',
                 Rule::unique('cn31_bags', 'bag_number')->where(
-                    fn ($query) => $query->where('company_id', $company->id)
+                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
             ],
             'manifest.bags.*.dispatch_number_bag' => [
@@ -59,7 +61,7 @@ class BulkIntegrationController extends Controller
                 'max:30',
                 'distinct',
                 Rule::unique('cn31_bags', 'dispatch_number_bag')->where(
-                    fn ($query) => $query->where('company_id', $company->id)
+                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
             ],
             'manifest.bags.*.package_count' => ['required', 'integer', 'min:1'],
@@ -76,10 +78,10 @@ class BulkIntegrationController extends Controller
                     }
                 },
                 Rule::unique('packages', 'tracking_code')->where(
-                    fn ($query) => $query->where('company_id', $company->id)
+                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
                 Rule::unique('cn33_packages', 'tracking_code')->where(
-                    fn ($query) => $query->where('company_id', $company->id)
+                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
             ],
             'manifest.bags.*.packages.*.origin' => ['required', 'string', 'max:255'],
@@ -277,11 +279,12 @@ class BulkIntegrationController extends Controller
             ], 422);
         }
 
-        $result = DB::transaction(function () use ($company, $validated, $bagsPayload, $recordCount): array {
+        $result = DB::transaction(function () use ($company, $validated, $bagsPayload, $recordCount, $apiToken): array {
             $manifestData = $validated['manifest'];
 
             $manifest = Cn31Manifest::create([
                 'company_id' => $company->id,
+                ...ApiTokenContext::ownershipAttributes($apiToken),
                 'cn31_number' => $manifestData['cn31_number'],
                 'dispatch_number_manifest' => $manifestData['dispatch_number_manifest'] ?? null,
                 'origin_office' => $manifestData['origin_office'],
@@ -304,6 +307,7 @@ class BulkIntegrationController extends Controller
             foreach ($bagsPayload as $bagIndex => $bagPayload) {
                 $bag = $manifest->bags()->create([
                     'company_id' => $company->id,
+                    ...ApiTokenContext::ownershipAttributes($apiToken),
                     'bag_number' => $bagPayload['bag_number'],
                     'dispatch_number_bag' => $bagPayload['dispatch_number_bag'] ?? null,
                     'declared_package_count' => $bagPayload['package_count'],
@@ -324,6 +328,7 @@ class BulkIntegrationController extends Controller
 
                     $package = Package::create([
                         'company_id' => $company->id,
+                        ...ApiTokenContext::ownershipAttributes($apiToken),
                         'tracking_code' => $packagePayload['tracking_code'],
                         'reference' => null,
                         'sender_name' => $cn22['sender_name'],
@@ -396,6 +401,7 @@ class BulkIntegrationController extends Controller
 
                     Cn33Package::create([
                         'company_id' => $company->id,
+                        ...ApiTokenContext::ownershipAttributes($apiToken),
                         'cn31_bag_id' => $bag->id,
                         'package_id' => $package->id,
                         'tracking_code' => $packagePayload['tracking_code'],
@@ -415,6 +421,7 @@ class BulkIntegrationController extends Controller
 
                     $package->movements()->create([
                         'company_id' => $company->id,
+                        ...ApiTokenContext::ownershipAttributes($apiToken),
                         'status' => 'pre_alerta_recibida',
                         'location' => $cn22['origin_office'],
                         'description' => __('api.messages.cn22_pre_alert_received'),

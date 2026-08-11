@@ -30,6 +30,10 @@
                             @endforeach
                         </x-adminlte-select>
                         <x-adminlte-input name="name" label="Nombre del token" value="{{ old('name') }}" placeholder="Token Produccion 360 Lions" required />
+                        <x-adminlte-select name="token_type" label="Tipo de token">
+                            <option value="production" @selected(old('token_type', 'production') === 'production')>Produccion</option>
+                            <option value="trial" @selected(old('token_type') === 'trial')>Prueba aislada</option>
+                        </x-adminlte-select>
                         <x-adminlte-input name="starts_at" type="datetime-local" label="Fecha inicio" value="{{ old('starts_at', now()->format('Y-m-d\\TH:i')) }}" required />
                         <x-adminlte-input name="expires_at" type="datetime-local" label="Fecha fin" value="{{ old('expires_at', now()->addDays(30)->format('Y-m-d\\TH:i')) }}" required />
                         <x-adminlte-button type="submit" theme="primary" label="Guardar token" icon="fas fa-save" class="table-style-submit"/>
@@ -60,7 +64,7 @@
                                         </td>
                                         <td>
                                             <strong>{{ $token->name }}</strong><br>
-                                            <small class="text-muted">Token principal de integracion</small>
+                                            <small class="text-muted">{{ $token->isTrial() ? 'Token de prueba con purga automatica' : 'Token principal de integracion' }}</small>
                                         </td>
                                         <td>
                                             <div><strong>Desde:</strong> {{ $token->starts_at?->format('Y-m-d H:i') ?? 'Inmediato' }}</div>
@@ -80,6 +84,11 @@
                                             @else
                                                 <span class="badge badge-success">Activo</span>
                                             @endif
+                                            <div class="mt-2">
+                                                <span class="badge badge-{{ $token->isTrial() ? 'warning' : 'primary' }}">
+                                                    {{ $token->isTrial() ? 'Prueba' : 'Produccion' }}
+                                                </span>
+                                            </div>
                                         </td>
                                         <td>
                                             <div class="action-stack">
@@ -257,15 +266,16 @@ document.addEventListener('DOMContentLoaded', function () {
                         <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;border:1px solid #d9e4f5;border-radius:18px;background:linear-gradient(180deg,#f8fbff 0%,#eef4ff 100%);">
                             <div style="width:58px;height:58px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:#1f4fb8;color:#fff;font-size:24px;font-weight:800;">#</div>
                             <div>
-                                <div style="font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:#6b87bd;font-weight:800;">Nuevo token de integración</div>
+                                <div style="font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:#6b87bd;font-weight:800;">Nuevo token de integracion</div>
                                 <div style="font-size:18px;font-weight:800;color:#173f9f;">{{ session('new_token.name') }}</div>
                                 <div style="margin-top:2px;color:#5a7bbd;">Empresa: {{ session('new_token.company') }}</div>
+                                <div style="margin-top:2px;color:#5a7bbd;">Tipo: {{ session('new_token.token_type') === 'trial' ? 'Prueba aislada' : 'Produccion' }}</div>
                             </div>
                         </div>
                         <div>
                             <label style="display:block;margin-bottom:8px;font-weight:800;color:#173f9f;">Token</label>
                             <textarea readonly style="width:100%;min-height:120px;padding:14px 16px;border:1px solid #d9e4f5;border-radius:16px;background:#f8fbff;color:#163f9d;resize:none;line-height:1.5;">{{ session('new_token.token') }}</textarea>
-                            <p style="margin:12px 0 0;color:#5a7bbd;font-size:.94rem;line-height:1.5;">Usa este valor en <code>Authorization: Bearer {token}</code>. Guarda este dato de forma segura antes de continuar.</p>
+                            <p style="margin:12px 0 0;color:#5a7bbd;font-size:.94rem;line-height:1.5;">Usa este valor en <code>Authorization: Bearer {token}</code>. @if (session('new_token.token_type') === 'trial') Al revocarlo se eliminaran automaticamente los datos creados por esa prueba. @else Guarda este dato de forma segura antes de continuar. @endif</p>
                         </div>
                     </div>
                 `,

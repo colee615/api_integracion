@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Admin;
 use App\Http\Controllers\Controller;
 use App\Models\ApiToken;
 use App\Models\Company;
+use App\Services\TrialTokenPurger;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\Rule;
@@ -28,6 +29,7 @@ class TokenController extends Controller
         $validated = $request->validate([
             'company_id' => ['required', Rule::exists('companies', 'id')],
             'name' => ['required', 'string', 'max:255'],
+            'token_type' => ['required', Rule::in(['production', 'trial'])],
             'starts_at' => ['required', 'date'],
             'expires_at' => ['required', 'date', 'after:starts_at'],
         ]);
@@ -38,21 +40,26 @@ class TokenController extends Controller
             $company,
             $validated['name'],
             now()->parse($validated['starts_at']),
-            now()->parse($validated['expires_at'])
+            now()->parse($validated['expires_at']),
+            ['packages:write', 'packages:read'],
+            $validated['token_type']
         );
 
         return back()->with('new_token', [
             'company' => $company->name,
             'name' => $validated['name'],
             'token' => $plainTextToken,
+            'token_type' => $validated['token_type'],
         ])->with('status', 'Token exclusivo generado correctamente.');
     }
 
-    public function revoke(ApiToken $token): RedirectResponse
+    public function revoke(ApiToken $token, TrialTokenPurger $purger): RedirectResponse
     {
         $token->forceFill([
             'revoked_at' => now(),
         ])->save();
+
+        $purger->purge($token);
 
         return back()->with('status', 'Token revocado correctamente.');
     }
@@ -81,7 +88,7 @@ class TokenController extends Controller
         return back()->with('status', 'Vigencia del token actualizada correctamente.');
     }
 
-    public function updateSettings(Request $request, ApiToken $token): RedirectResponse
+    public function updateSettings(Request $request, ApiToken $token, TrialTokenPurger $purger): RedirectResponse
     {
         $validated = $request->validate([
             'starts_at' => ['required', 'date'],
@@ -95,11 +102,16 @@ class TokenController extends Controller
             'revoked_at' => $validated['status'] === 'inactive' ? now() : null,
         ])->save();
 
+        if ($validated['status'] === 'inactive') {
+            $purger->purge($token);
+        }
+
         return back()->with('status', 'Configuracion del token actualizada correctamente.');
     }
 
-    public function destroy(ApiToken $token): RedirectResponse
+    public function destroy(ApiToken $token, TrialTokenPurger $purger): RedirectResponse
     {
+        $purger->purge($token);
         $token->delete();
 
         return back()->with('status', 'Token eliminado correctamente.');

@@ -26,6 +26,7 @@ class MeController extends Controller
                 'token' => [
                     'id' => $token->id,
                     'name' => $token->name,
+                    'type' => $token->token_type,
                     'expires_at' => $token->expires_at?->toIso8601String(),
                     'last_used_at' => $token->last_used_at?->toIso8601String(),
                     'abilities' => $token->abilities ?? [],

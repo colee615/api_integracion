@@ -18,6 +18,7 @@ class ApiToken extends Model
     protected $fillable = [
         'company_id',
         'name',
+        'token_type',
         'token_hash',
         'token_secret',
         'last_used_at',
@@ -88,6 +89,11 @@ class ApiToken extends Model
             && $this->company?->status === 'active';
     }
 
+    public function isTrial(): bool
+    {
+        return $this->token_type === 'trial';
+    }
+
     public function touchLastUsed(): void
     {
         $this->forceFill([
@@ -100,12 +106,14 @@ class ApiToken extends Model
         string $name,
         CarbonInterface $startsAt,
         CarbonInterface $expiresAt,
-        array $abilities = ['packages:write', 'packages:read']
+        array $abilities = ['packages:write', 'packages:read'],
+        string $tokenType = 'production'
     ): array {
         $plainTextToken = Str::random(64);
 
         $token = $company->apiTokens()->create([
             'name' => $name,
+            'token_type' => $tokenType,
             'token_hash' => hash('sha256', $plainTextToken),
             'token_secret' => $plainTextToken,
             'starts_at' => Carbon::instance($startsAt),

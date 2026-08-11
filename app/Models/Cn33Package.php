@@ -12,6 +12,7 @@ class Cn33Package extends Model
 
     protected $fillable = [
         'company_id',
+        'created_by_api_token_id',
         'cn31_bag_id',
         'package_id',
         'tracking_code',
