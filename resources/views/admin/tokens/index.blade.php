@@ -95,8 +95,6 @@
                                                 <button
                                                     type="button"
                                                     class="btn btn-xs btn-info js-open-token-view-modal"
-                                                    data-toggle="modal"
-                                                    data-target="#token-view-modal"
                                                     data-company="{{ $token->company->name }}"
                                                     data-token-name="{{ $token->name }}"
                                                     data-token-secret="{{ $token->token_secret }}"
@@ -184,37 +182,6 @@
         </div>
     </div>
 
-    <div class="modal fade" id="token-view-modal" tabindex="-1" aria-labelledby="token-view-modal-label" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-title" id="token-view-modal-label">Ver token</h5>
-                    <button type="button" class="close" data-dismiss="modal" aria-label="Cerrar">
-                        <span aria-hidden="true">&times;</span>
-                    </button>
-                </div>
-
-                <div class="modal-body">
-                    <div class="form-group">
-                        <label for="token-view-secret">Token</label>
-                        <div class="input-group">
-                            <textarea id="token-view-secret" class="form-control" rows="4" readonly></textarea>
-                            <div class="input-group-append">
-                                <button type="button" class="btn btn-outline-primary" id="token-view-copy-button" title="Copiar token">
-                                    <i class="fas fa-copy"></i>
-                                </button>
-                            </div>
-                        </div>
-                        <small class="text-muted d-block mt-2">Usa este valor en <code>Authorization: Bearer {token}</code>.</small>
-                    </div>
-                </div>
-
-                <div class="modal-footer">
-                    <button type="button" class="btn btn-default" data-dismiss="modal">Cerrar</button>
-                </div>
-            </div>
-        </div>
-    </div>
 @stop
 
 @section('js')
@@ -224,8 +191,6 @@ document.addEventListener('DOMContentLoaded', function () {
     const startsAtField = document.getElementById('token-vigencia-starts-at');
     const expiresAtField = document.getElementById('token-vigencia-expires-at');
     const statusField = document.getElementById('token-vigencia-status');
-    const tokenViewSecretField = document.getElementById('token-view-secret');
-    const tokenViewCopyButton = document.getElementById('token-view-copy-button');
 
     document.querySelectorAll('.js-open-token-modal').forEach(function (button) {
         button.addEventListener('click', function () {
@@ -237,13 +202,60 @@ document.addEventListener('DOMContentLoaded', function () {
     });
 
     document.querySelectorAll('.js-open-token-view-modal').forEach(function (button) {
-        button.addEventListener('click', function () {
-            tokenViewSecretField.value = button.dataset.tokenSecret || '';
-        });
-    });
+        button.addEventListener('click', async function () {
+            const tokenSecret = button.dataset.tokenSecret || '';
+            const tokenName = button.dataset.tokenName || 'Token de integracion';
+            const companyName = button.dataset.company || 'Empresa';
 
-    tokenViewCopyButton?.addEventListener('click', async function () {
-        await navigator.clipboard.writeText(tokenViewSecretField.value);
+            if (! tokenSecret) {
+                return;
+            }
+
+            if (window.Swal) {
+                const result = await window.Swal.fire({
+                    title: 'Ver token',
+                    width: 760,
+                    padding: '2.2rem 2rem 1.8rem',
+                    background: '#ffffff',
+                    confirmButtonText: 'Cerrar',
+                    confirmButtonColor: '#1f4fb8',
+                    showCancelButton: true,
+                    cancelButtonText: 'Copiar token',
+                    cancelButtonColor: '#17a2b8',
+                    customClass: {
+                        popup: 'corp-swal-popup',
+                        title: 'corp-swal-title',
+                        confirmButton: 'corp-swal-confirm'
+                    },
+                    html: `
+                        <div style="display:flex;flex-direction:column;gap:18px;text-align:left;">
+                            <div style="display:flex;align-items:center;gap:14px;padding:16px 18px;border:1px solid #d9e4f5;border-radius:18px;background:linear-gradient(180deg,#f8fbff 0%,#eef4ff 100%);">
+                                <div style="width:58px;height:58px;border-radius:18px;display:flex;align-items:center;justify-content:center;background:#1f4fb8;color:#fff;font-size:24px;font-weight:800;">#</div>
+                                <div>
+                                    <div style="font-size:14px;text-transform:uppercase;letter-spacing:.08em;color:#6b87bd;font-weight:800;">Token activo</div>
+                                    <div style="font-size:18px;font-weight:800;color:#173f9f;">${tokenName}</div>
+                                    <div style="margin-top:2px;color:#5a7bbd;">Empresa: ${companyName}</div>
+                                </div>
+                            </div>
+                            <div>
+                                <label style="display:block;margin-bottom:8px;font-weight:800;color:#173f9f;">Token</label>
+                                <textarea readonly style="width:100%;min-height:120px;padding:14px 16px;border:1px solid #d9e4f5;border-radius:16px;background:#f8fbff;color:#163f9d;resize:none;line-height:1.5;">${tokenSecret}</textarea>
+                                <p style="margin:12px 0 0;color:#5a7bbd;font-size:.94rem;line-height:1.5;">Usa este valor en <code>Authorization: Bearer {token}</code>.</p>
+                            </div>
+                        </div>
+                    `
+                });
+
+                if (result.dismiss === window.Swal.DismissReason.cancel) {
+                    await navigator.clipboard.writeText(tokenSecret);
+                }
+
+                return;
+            }
+
+            await navigator.clipboard.writeText(tokenSecret);
+            window.alert(tokenSecret);
+        });
     });
 
     @if (session('new_token'))
