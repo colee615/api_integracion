@@ -9,13 +9,7 @@ use App\Http\Controllers\Company\DashboardController as CompanyDashboardControll
 use Illuminate\Support\Facades\Route;
 
 Route::get('/', function () {
-    if (! auth()->check()) {
-        return redirect()->route('login');
-    }
-
-    return auth()->user()->isAdmin()
-        ? redirect()->route('admin.dashboard')
-        : redirect()->route('company.dashboard');
+    return view('welcome');
 });
 
 Route::middleware('guest')->group(function (): void {

@@ -92,18 +92,17 @@
                                         </td>
                                         <td>
                                             <div class="action-stack">
-                                                @if ($token->token_secret)
-                                                    <button
+                                                <button
                                                     type="button"
                                                     class="btn btn-xs btn-info js-open-token-view-modal"
                                                     data-toggle="modal"
                                                     data-target="#token-view-modal"
                                                     data-company="{{ $token->company->name }}"
                                                     data-token-name="{{ $token->name }}"
-                                                    data-token-secret="{{ $token->token_secret }}">
-                                                        <i class="fas fa-eye"></i> Ver token
-                                                    </button>
-                                                @endif
+                                                    data-token-secret="{{ $token->token_secret }}"
+                                                    @disabled(blank($token->token_secret))>
+                                                    <i class="fas fa-eye"></i> Ver token
+                                                </button>
 
                                                 <button
                                                     type="button"
