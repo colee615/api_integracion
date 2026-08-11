@@ -186,7 +186,7 @@
 
 @section('js')
 <script>
-document.addEventListener('DOMContentLoaded', function () {
+function initTokenPage() {
     const modalForm = document.getElementById('token-vigencia-form');
     const startsAtField = document.getElementById('token-vigencia-starts-at');
     const expiresAtField = document.getElementById('token-vigencia-expires-at');
@@ -247,14 +247,21 @@ document.addEventListener('DOMContentLoaded', function () {
                 });
 
                 if (result.dismiss === window.Swal.DismissReason.cancel) {
-                    await navigator.clipboard.writeText(tokenSecret);
+                    if (navigator.clipboard?.writeText) {
+                        await navigator.clipboard.writeText(tokenSecret);
+                    } else {
+                        window.prompt('Copia el token:', tokenSecret);
+                    }
                 }
 
                 return;
             }
 
-            await navigator.clipboard.writeText(tokenSecret);
-            window.alert(tokenSecret);
+            if (navigator.clipboard?.writeText) {
+                await navigator.clipboard.writeText(tokenSecret);
+            }
+
+            window.prompt('Copia el token:', tokenSecret);
         });
     });
 
@@ -299,7 +306,13 @@ document.addEventListener('DOMContentLoaded', function () {
             });
         }
     @endif
-});
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', initTokenPage, { once: true });
+} else {
+    initTokenPage();
+}
 </script>
 @stop
 
