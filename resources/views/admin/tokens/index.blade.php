@@ -1,23 +1,65 @@
 @extends('adminlte::page')
 
-@section('title', 'Tokens de Integracion')
-
-@section('css')
-    @include('admin.partials.enterprise-theme')
-@stop
+@section('title', 'Credenciales API')
 
 @section('content_header')
     <section class="page-hero">
-        <span class="page-kicker"><i class="fas fa-key"></i> Seguridad de integraciones</span>
-        <h1 class="page-title">Gestion de tokens de integracion</h1>
+        <span class="page-kicker"><i class="fas fa-plug"></i> Configuración y accesos</span>
+        <h1 class="page-title">Credenciales API</h1>
+        <p class="text-muted mb-0">Consulta las rutas disponibles, revisa qué permisos necesita cada API y administra los tokens por empresa.</p>
     </section>
 @stop
 
 @section('content')
     <div class="page-shell">
+        <div class="row mb-3">
+            <div class="col-12">
+                <x-adminlte-card title="Catálogo de APIs disponibles" theme="light" icon="fas fa-code" class="panel-card">
+                    <div class="mb-3 text-right">
+                        <a class="btn btn-sm btn-outline-primary" href="{{ route('admin.tokens.openapi') }}">
+                            <i class="fas fa-file-download mr-1"></i> Descargar OpenAPI
+                        </a>
+                    </div>
+                    <div class="section-note mb-3">
+                        Base de integración: <code>{{ url('/api/v1') }}</code>.
+                        Las rutas del catálogo se autentican con <code>Authorization: Bearer {token}</code>; cada token queda limitado a su empresa y a sus permisos.
+                    </div>
+                    <div class="table-responsive">
+                        <table class="table corp-table">
+                            <thead>
+                                <tr>
+                                    <th>Grupo</th>
+                                    <th>Método</th>
+                                    <th>URL para consultar o integrar</th>
+                                    <th>Descripción</th>
+                                    <th>Permiso requerido</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                @foreach ($apiCatalog as $api)
+                                    <tr>
+                                        <td>{{ $api['group'] }}</td>
+                                        <td>
+                                            <span class="badge badge-{{ $api['method'] === 'GET' ? 'success' : ($api['method'] === 'POST' ? 'warning' : 'secondary') }}">
+                                                {{ $api['method'] }}
+                                            </span>
+                                        </td>
+                                        <td><code>{{ url($api['path']) }}</code></td>
+                                        <td>{{ $api['description'] }}</td>
+                                        <td><span class="badge badge-light">{{ $api['ability'] }}</span></td>
+                                    </tr>
+                                @endforeach
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted">Las rutas del portal de empresa y las rutas internas del sistema usan autenticación distinta y no forman parte de estas credenciales Bearer.</small>
+                </x-adminlte-card>
+            </div>
+        </div>
+
         <div class="row">
             <div class="col-md-4">
-                <x-adminlte-card title="Emitir token" theme="light" icon="fas fa-key" class="panel-card form-zone">
+                <x-adminlte-card title="Crear credencial" theme="light" icon="fas fa-key" class="panel-card form-zone">
                     <div class="section-note mb-3">
                         Este es el unico mecanismo habilitado para integracion. El mismo token se usa en <code>Authorization: Bearer {token}</code> para todas las APIs.
                     </div>
@@ -36,6 +78,23 @@
                         </x-adminlte-select>
                         <x-adminlte-input name="starts_at" type="datetime-local" label="Fecha inicio" value="{{ old('starts_at', now()->format('Y-m-d\\TH:i')) }}" required />
                         <x-adminlte-input name="expires_at" type="datetime-local" label="Fecha fin" value="{{ old('expires_at', now()->addDays(30)->format('Y-m-d\\TH:i')) }}" required />
+                        <div class="form-group">
+                            <label>Permisos del token</label>
+                            @php($selectedAbilities = is_array(old('abilities')) ? old('abilities') : ['tracking:read', 'tracking:write'])
+                            @foreach ([
+                                'tracking:read' => 'Consultar envios e historial',
+                                'tracking:write' => 'Registrar envios',
+                                'tracking:events:write' => 'Agregar eventos de tracking',
+                                'documents:read' => 'Consultar CN31/CN33',
+                                'documents:write' => 'Crear documentos y manifiestos',
+                                'webhooks:manage' => 'Administrar webhooks',
+                            ] as $ability => $label)
+                                <div class="custom-control custom-checkbox mb-1">
+                                    <input class="custom-control-input" type="checkbox" name="abilities[]" id="ability-{{ str_replace(':', '-', $ability) }}" value="{{ $ability }}" @checked(in_array($ability, $selectedAbilities, true))>
+                                    <label class="custom-control-label" for="ability-{{ str_replace(':', '-', $ability) }}">{{ $label }}</label>
+                                </div>
+                            @endforeach
+                        </div>
                         <x-adminlte-button type="submit" theme="primary" label="Guardar token" icon="fas fa-save" class="table-style-submit"/>
                     </form>
                 </x-adminlte-card>
@@ -65,6 +124,18 @@
                                         <td>
                                             <strong>{{ $token->name }}</strong><br>
                                             <small class="text-muted">{{ $token->isTrial() ? 'Token de prueba con purga automatica' : 'Token principal de integracion' }}</small>
+                                            <br><small class="text-muted">Permisos: {{ implode(', ', $token->abilities ?? []) }}</small>
+                                            @php($tokenApis = collect($apiCatalog)->filter(fn ($api) => $token->allows($api['ability']))->values())
+                                            <details class="mt-2">
+                                                <summary class="small">APIs habilitadas ({{ $tokenApis->count() }})</summary>
+                                                <ul class="small pl-3 mt-2 mb-0">
+                                                    @forelse ($tokenApis as $api)
+                                                        <li><code>{{ $api['method'] }}</code> {{ url($api['path']) }}</li>
+                                                    @empty
+                                                        <li class="text-muted">Este token no habilita rutas del catálogo.</li>
+                                                    @endforelse
+                                                </ul>
+                                            </details>
                                         </td>
                                         <td>
                                             <div><strong>Desde:</strong> {{ $token->starts_at?->format('Y-m-d H:i') ?? 'Inmediato' }}</div>
@@ -101,6 +172,11 @@
                                                     @disabled(blank($token->token_secret))>
                                                     <i class="fas fa-eye"></i> Ver token
                                                 </button>
+
+                                                <form method="POST" action="{{ route('admin.tokens.rotate', $token) }}" onsubmit="return confirm('{{ $token->isTrial() ? 'Rotar esta credencial revocará el token anterior y purgará los datos que creó. ¿Continuar?' : 'Rotar esta credencial revocará el token anterior de inmediato. ¿Continuar?' }}')">
+                                                    @csrf
+                                                    <x-adminlte-button type="submit" theme="warning" label="Rotar credencial" size="xs" icon="fas fa-sync-alt"/>
+                                                </form>
 
                                                 <button
                                                     type="button"
@@ -288,6 +364,7 @@ function initTokenPage() {
                                 <div style="font-size:18px;font-weight:800;color:#173f9f;">{{ session('new_token.name') }}</div>
                                 <div style="margin-top:2px;color:#5a7bbd;">Empresa: {{ session('new_token.company') }}</div>
                                 <div style="margin-top:2px;color:#5a7bbd;">Tipo: {{ session('new_token.token_type') === 'trial' ? 'Prueba aislada' : 'Produccion' }}</div>
+                                <div style="margin-top:2px;color:#5a7bbd;">Permisos: {{ implode(', ', session('new_token.abilities', [])) }}</div>
                             </div>
                         </div>
                         <div>

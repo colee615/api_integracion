@@ -2,52 +2,52 @@
 
 namespace App\Services;
 
+use App\Jobs\DeliverWebhook;
 use App\Models\Package;
+use App\Models\WebhookDelivery;
 use App\Models\WebhookEndpoint;
 use App\Support\ApiTokenContext;
 use App\Support\PackageStatusCatalog;
-use Illuminate\Support\Facades\Http;
-use Throwable;
+use Illuminate\Support\Carbon;
+use Illuminate\Support\Str;
 
 class WebhookNotifier
 {
     public function dispatchForPackage(Package $package, string $status, array $context = []): void
     {
         $event = PackageStatusCatalog::eventForStatus($status);
-
-        if (! $event) {
-            return;
-        }
-
         $company = $package->company;
 
-        if (! $company) {
+        if (! $event || ! $company || ($context['is_public'] ?? true) === false) {
             return;
         }
 
+        $eventId = (string) ($context['event_id'] ?? Str::uuid());
         $payload = [
-            'event' => $event,
-            'occurred_at' => now()->toIso8601String(),
+            'id' => $eventId,
+            'type' => $event,
+            'event_code' => $event,
+            'test' => ($context['mode'] ?? null) === 'manual_test',
+            'occurred_at' => isset($context['occurred_at'])
+                ? Carbon::parse($context['occurred_at'])->utc()->toIso8601String()
+                : now()->utc()->toIso8601String(),
             'company' => [
                 'id' => $company->id,
-                'name' => $company->name,
                 'slug' => $company->slug,
                 'environment' => $company->environment,
             ],
             'shipment' => [
-                'package_id' => $package->id,
                 'tracking_code' => $package->tracking_code,
                 'tracking_standard' => $package->tracking_standard,
                 'status' => PackageStatusCatalog::normalize($status),
                 'status_label' => PackageStatusCatalog::labelForStatus($status),
-                'recipient_name' => $package->recipient_name,
-                'recipient_document' => $package->recipient_document,
-                'recipient_city' => $package->recipient_city,
-                'recipient_department' => $package->recipient_department,
-                'destination' => $package->destination,
-                'last_movement_at' => $package->last_movement_at?->toIso8601String(),
             ],
-            'context' => $context,
+            'data' => array_filter([
+                'location' => $context['location'] ?? null,
+                'reason_code' => $context['reason_code'] ?? null,
+                'description' => $context['description'] ?? null,
+                'source_reference' => $context['source_reference'] ?? null,
+            ], static fn (mixed $value): bool => $value !== null),
         ];
 
         $packageToken = $package->created_by_api_token_id
@@ -59,52 +59,34 @@ class WebhookNotifier
                 ->where('company_id', $company->id)
                 ->where('is_active', true),
             $packageToken
-        )
-            ->get()
-            ->filter(function (WebhookEndpoint $endpoint) use ($event): bool {
-                $events = $endpoint->events ?? [];
-
-                return in_array('*', $events, true) || in_array($event, $events, true);
-            });
+        )->when(isset($context['endpoint_id']), fn ($query) => $query->whereKey($context['endpoint_id']))
+            ->get();
 
         foreach ($endpoints as $endpoint) {
-            $delivery = $endpoint->deliveries()->create([
-                'company_id' => $company->id,
-                'created_by_api_token_id' => $endpoint->created_by_api_token_id,
-                'event' => $event,
-                'tracking_code' => $package->tracking_code,
-                'payload' => $payload,
-            ]);
+            $events = $endpoint->events ?? [];
 
-            try {
-                $json = json_encode($payload, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES) ?: '{}';
-                $signature = hash_hmac('sha256', $json, $endpoint->secret);
+            $isManualTest = ($context['mode'] ?? null) === 'manual_test';
+            if (! $isManualTest && ! in_array('*', $events, true) && ! in_array($event, $events, true)) {
+                continue;
+            }
 
-                $response = Http::timeout(10)
-                    ->withHeaders([
-                        'Content-Type' => 'application/json',
-                        'X-Webhook-Event' => $event,
-                        'X-Webhook-Signature' => $signature,
-                    ])
-                    ->post($endpoint->target_url, $payload);
+            $delivery = WebhookDelivery::query()->firstOrCreate(
+                [
+                    'webhook_endpoint_id' => $endpoint->id,
+                    'event_id' => $eventId,
+                ],
+                [
+                    'company_id' => $company->id,
+                    'created_by_api_token_id' => $endpoint->created_by_api_token_id,
+                    'event' => $event,
+                    'tracking_code' => $package->tracking_code,
+                    'payload' => $payload,
+                    'status' => 'pending',
+                ]
+            );
 
-                $delivery->forceFill([
-                    'response_status' => $response->status(),
-                    'success' => $response->successful(),
-                    'delivered_at' => now(),
-                    'response_body' => $response->body(),
-                ])->save();
-
-                $endpoint->forceFill([
-                    'last_used_at' => now(),
-                ])->save();
-            } catch (Throwable $exception) {
-                $delivery->forceFill([
-                    'response_status' => 0,
-                    'success' => false,
-                    'delivered_at' => now(),
-                    'response_body' => $exception->getMessage(),
-                ])->save();
+            if ($delivery->wasRecentlyCreated) {
+                DeliverWebhook::dispatch($delivery->id)->afterCommit();
             }
         }
     }

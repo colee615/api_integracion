@@ -9,6 +9,7 @@ use App\Support\PackageStatusCatalog;
 use App\Support\PackageTrackingCode;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 
 class PackageController extends Controller
@@ -19,7 +20,7 @@ class PackageController extends Controller
         $apiToken = ApiTokenContext::currentToken($request);
 
         $packages = ApiTokenContext::scopeToToken(
-            Package::query()->where('company_id', $company->id),
+            Package::query()->with('cn33Package')->where('company_id', $company->id),
             $apiToken
         )
             ->when($request->string('tracking_code')->isNotEmpty(), function ($query) use ($request) {
@@ -27,6 +28,17 @@ class PackageController extends Controller
             })
             ->latest()
             ->paginate(20);
+
+        $packages->getCollection()->transform(fn (Package $package): array => [
+            'tracking_code' => $package->tracking_code,
+            'reference' => $package->reference,
+            'origin' => $package->cn33Package?->origin,
+            'destination' => $package->destination,
+            'status' => $package->status,
+            'status_label' => PackageStatusCatalog::labelForStatus($package->status),
+            'registered_at' => $package->registered_at?->utc()->toIso8601String(),
+            'last_movement_at' => $package->last_movement_at?->utc()->toIso8601String(),
+        ]);
 
         return response()->json($packages);
     }
@@ -78,7 +90,7 @@ class PackageController extends Controller
             'pre_alert_at' => ['nullable', 'date'],
             'tracking_standard' => ['nullable', 'string', 'max:40'],
             'customs_items' => ['nullable', 'array'],
-            'status' => ['nullable', Rule::in(PackageStatusCatalog::allowedStatuses())],
+            'status' => ['nullable', Rule::in(['registrado', 'pre_alerta_recibida', 'recibido_api'])],
             'registered_at' => ['nullable', 'date'],
             'meta' => ['nullable', 'array'],
         ]);
@@ -87,18 +99,36 @@ class PackageController extends Controller
         $validated['recipient_whatsapp'] = $validated['recipient_whatsapp'] ?? ($validated['recipient_phone'] ?? null);
         $validated['weight_kg'] = $validated['weight_kg'] ?? (isset($validated['gross_weight_grams']) ? round($validated['gross_weight_grams'] / 1000, 3) : null);
 
-        $package = Package::create([
-            ...$validated,
-            'company_id' => $company->id,
-            ...ApiTokenContext::ownershipAttributes($apiToken),
-            'status' => $validated['status'] ?? 'registrado',
-            'registered_at' => $validated['registered_at'] ?? now(),
-            'last_movement_at' => $validated['registered_at'] ?? now(),
-        ]);
+        [$package, $movement] = DB::transaction(function () use ($validated, $company, $apiToken): array {
+            $registeredAt = $validated['registered_at'] ?? now();
+            $initialStatus = PackageStatusCatalog::normalize($validated['status'] ?? 'registrado');
+            $package = Package::create([
+                ...$validated,
+                'company_id' => $company->id,
+                ...ApiTokenContext::ownershipAttributes($apiToken),
+                'status' => $initialStatus,
+                'registered_at' => $registeredAt,
+                'last_movement_at' => $registeredAt,
+            ]);
+
+            $movement = $package->movements()->create([
+                'company_id' => $company->id,
+                ...ApiTokenContext::ownershipAttributes($apiToken),
+                'event_code' => PackageStatusCatalog::eventForStatus($initialStatus),
+                'source_type' => 'company_api',
+                'status' => $initialStatus,
+                'description' => PackageStatusCatalog::labelForStatus($initialStatus),
+                'occurred_at' => $registeredAt,
+                'recorded_at' => now()->utc(),
+                'meta' => ['source' => 'package_registration'],
+            ]);
+
+            return [$package, $movement];
+        });
 
         return response()->json([
             'message' => __('api.messages.package_registered'),
-            'data' => $this->transformPackage($package->load('movements')),
+            'data' => $this->transformPackage($package->load(['movements', 'cn33Package'])),
         ], 201);
     }
 
@@ -108,7 +138,13 @@ class PackageController extends Controller
         $apiToken = ApiTokenContext::currentToken($request);
 
         $package = ApiTokenContext::scopeToToken(
-            Package::with('movements')->where('company_id', $company->id),
+            Package::query()
+                ->with([
+                    'cn33Package',
+                    'movements' => fn ($query) => $query->where('is_public', true)->reorder('occurred_at', 'desc')->limit(20),
+                ])
+                ->withCount(['movements as public_movements_count' => fn ($query) => $query->where('is_public', true)])
+                ->where('company_id', $company->id),
             $apiToken
         )
             ->where('tracking_code', $trackingCode)
@@ -136,12 +172,13 @@ class PackageController extends Controller
             'recipient_city' => $package->recipient_city,
             'recipient_department' => $package->recipient_department,
             'recipient_address_reference' => $package->recipient_address_reference,
+            'origin' => $package->cn33Package?->origin,
             'destination' => $package->destination,
             'origin_office' => $package->origin_office,
             'destination_office' => $package->destination_office,
             'recipient_address' => $package->recipient_address,
             'shipment_description' => $package->shipment_description,
-            'shipment_date' => $package->shipment_date?->toIso8601String(),
+            'shipment_date' => $package->shipment_date?->utc()->toIso8601String(),
             'gross_weight_grams' => $package->gross_weight_grams,
             'weight_kg' => $package->weight_kg !== null ? (float) $package->weight_kg : null,
             'dimensions_cm' => [
@@ -151,30 +188,47 @@ class PackageController extends Controller
             ],
             'value_fob_usd' => $package->value_fob_usd !== null ? (float) $package->value_fob_usd : null,
             'currency_code' => $package->currency_code,
-            'pre_alert_at' => $package->pre_alert_at?->toIso8601String(),
+            'pre_alert_at' => $package->pre_alert_at?->utc()->toIso8601String(),
             'tracking_standard' => $package->tracking_standard,
             'customs_items' => $package->customs_items ?? [],
             'status' => $package->status,
             'status_label' => PackageStatusCatalog::labelForStatus($package->status),
-            'registered_at' => $package->registered_at?->toIso8601String(),
-            'last_movement_at' => $package->last_movement_at?->toIso8601String(),
+            'registered_at' => $package->registered_at?->utc()->toIso8601String(),
+            'last_movement_at' => $package->last_movement_at?->utc()->toIso8601String(),
             'delivery_attempts' => (int) $package->delivery_attempts,
-            'last_delivery_attempt_at' => $package->last_delivery_attempt_at?->toIso8601String(),
+            'last_delivery_attempt_at' => $package->last_delivery_attempt_at?->utc()->toIso8601String(),
             'last_delivery_attempt' => [
                 'attempt' => (int) $package->delivery_attempts,
                 'location' => $package->latestDeliveryAttemptLocation(),
+                'reason_code' => $package->latestDeliveryAttemptReasonCode(),
                 'description' => $package->latestDeliveryAttemptDescription(),
             ],
             'meta' => $package->meta ?? [],
-            'movements' => $package->movements->map(fn ($movement) => [
+            'movements' => $package->movements->sortBy('occurred_at')->map(fn ($movement) => [
                 'id' => $movement->id,
+                'event_id' => $movement->event_id,
+                'event_code' => $movement->event_code,
+                'ips_operation_code' => $movement->ips_operation_code,
+                'ips_event_type_cd' => $movement->ips_event_type_cd,
                 'status' => $movement->status,
                 'status_label' => PackageStatusCatalog::labelForStatus($movement->status),
                 'location' => $movement->location,
-                'description' => $movement->description,
-                'occurred_at' => $movement->occurred_at?->toIso8601String(),
+                'location_code' => $movement->location_code,
+                'reason_code' => $movement->reason_code,
+                'description' => $movement->displayDescription(),
+                'occurred_at' => $movement->occurred_at?->utc()->toIso8601String(),
+                'recorded_at' => $movement->recorded_at?->utc()->toIso8601String(),
+                'source' => $movement->source_type,
+                'source_reference' => $movement->source_reference,
+                'physical_confirmation' => $movement->physical_confirmation,
                 'meta' => $movement->meta ?? [],
             ])->values(),
+            'movement_history' => [
+                'included' => $package->movements->count(),
+                'total' => (int) ($package->public_movements_count ?? $package->movements->count()),
+                'complete' => (int) ($package->public_movements_count ?? $package->movements->count()) <= $package->movements->count(),
+                'endpoint' => '/api/v1/packages/'.$package->tracking_code.'/movements',
+            ],
         ];
     }
 }

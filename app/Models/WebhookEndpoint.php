@@ -11,6 +11,8 @@ class WebhookEndpoint extends Model
 {
     use HasFactory;
 
+    protected $hidden = ['secret'];
+
     protected $fillable = [
         'company_id',
         'created_by_api_token_id',
@@ -28,6 +30,7 @@ class WebhookEndpoint extends Model
         return [
             'events' => 'array',
             'is_active' => 'boolean',
+            'secret' => 'encrypted',
             'last_used_at' => 'datetime',
             'meta' => 'array',
         ];

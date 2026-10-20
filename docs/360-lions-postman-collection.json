@@ -3,7 +3,7 @@
     "_postman_id": "2ad7d91a-c7d8-4e66-9f76-360lions-api-integracion",
     "name": "360 Lions - Flujo Completo Integracion",
     "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
-    "description": "Coleccion para probar el flujo completo de 360 Lions usando un unico token manual: validacion, CN31, CN33, CN22, consultas, portal y webhooks."
+    "description": "Coleccion de ejemplos para el flujo de integracion de 360 Lions. Antes de usarla, configura base_url y api_token; para las rutas del portal, completa las credenciales de portal y ejecuta Portal Login para obtener portal_token."
   },
   "variable": [
     {
@@ -12,15 +12,15 @@
     },
     {
       "key": "api_token",
-      "value": "jcK0V3WVYClt4Lzixh5bf1pYa8d8ekPDEv6vQY9A7y2PIZwANobPO7Gya5GwvDYo"
+      "value": ""
     },
     {
       "key": "portal_email",
-      "value": "pruebalions@gmail.com"
+      "value": ""
     },
     {
       "key": "portal_password",
-      "value": "123456789"
+      "value": ""
     },
     {
       "key": "portal_token",
@@ -225,6 +225,51 @@
       }
     },
     {
+      "name": "Listar despachos CN31",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/cn31/manifests?received_at_from=2026-10-01&received_at_to=2026-10-31&per_page=100&page=1",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "cn31",
+            "manifests"
+          ],
+          "query": [
+            {
+              "key": "received_at_from",
+              "value": "2026-10-01"
+            },
+            {
+              "key": "received_at_to",
+              "value": "2026-10-31"
+            },
+            {
+              "key": "per_page",
+              "value": "100"
+            },
+            {
+              "key": "page",
+              "value": "1"
+            }
+          ]
+        },
+        "description": "Requiere documents:read. Devuelve despachos ordenados por dispatch_date descendente, con 20 resultados por defecto y hasta 100 por página. Filtros: dispatch_number_manifest (coincidencia exacta), dispatch_date_from/to (fecha declarada), received_at_from/to (fecha de recepción de la API). Los rangos son inclusivos y usan YYYY-MM-DD. Edita o elimina los parámetros de ejemplo según la consulta."
+      }
+    },
+    {
       "name": "7. Ver CN31",
       "request": {
         "method": "GET",
@@ -324,7 +369,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"status\": \"en_proceso_aduana\",\n  \"location\": \"Aeropuerto El Alto\",\n  \"description\": \"Ingreso a canal aduanero\",\n  \"occurred_at\": \"2026-04-08 10:30:00\",\n  \"meta\": {\n    \"source\": \"hub-central\"\n  }\n}"
+          "raw": "{\n  \"status\": \"en_proceso_aduana\",\n  \"location\": \"Aeropuerto El Alto\",\n  \"description\": \"Ingreso a canal aduanero\",\n  \"meta\": {\n    \"source\": \"hub-central\"\n  }\n}"
         },
         "url": {
           "raw": "{{base_url}}/packages/{{tracking_code}}/movements",
@@ -491,6 +536,40 @@
           "path": [
             "company",
             "dashboard"
+          ]
+        }
+      }
+    },
+    {
+      "name": "16. Consultar Movimientos de Saca CN33",
+      "request": {
+        "method": "GET",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "url": {
+          "raw": "{{base_url}}/cn33/bags/{{bag_number}}/movements?per_page=50",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "cn33",
+            "bags",
+            "{{bag_number}}",
+            "movements"
+          ],
+          "query": [
+            {
+              "key": "per_page",
+              "value": "50"
+            }
           ]
         }
       }

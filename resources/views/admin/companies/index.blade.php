@@ -3,7 +3,6 @@
 @section('title', 'Empresas')
 
 @section('css')
-    @include('admin.partials.enterprise-theme')
     <style>
         .company-delete-note {
             margin-top: .75rem;

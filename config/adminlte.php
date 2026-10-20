@@ -63,8 +63,8 @@ return [
     |
     */
 
-    'logo' => '<span class="brand-text">Integracion</span>',
-    'logo_img' => 'http://correos.gob.bo/frontstorage/cms/theme/CNOoA5H41DHjoZ4YmlAMyHqNHNeSpKwd5nrr7Lze.png',
+    'logo' => '<span class="brand-copy"><strong>Integración</strong><small>Gestión postal</small></span>',
+    'logo_img' => 'images/correos-de-bolivia.png',
     'logo_img_class' => 'brand-image elevation-0',
     'logo_img_xl' => null,
     'logo_img_xl_class' => 'brand-image-xs',
@@ -86,11 +86,11 @@ return [
     'auth_logo' => [
         'enabled' => true,
         'img' => [
-            'path' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
-            'alt' => 'Auth Logo',
+            'path' => 'images/correos-de-bolivia.png',
+            'alt' => 'Correos de Bolivia',
             'class' => '',
-            'width' => 50,
-            'height' => 50,
+            'width' => 200,
+            'height' => 65,
         ],
     ],
 
@@ -113,11 +113,11 @@ return [
         'enabled' => true,
         'mode' => 'fullscreen',
         'img' => [
-            'path' => 'vendor/adminlte/dist/img/AdminLTELogo.png',
-            'alt' => 'AdminLTE Preloader Image',
-            'effect' => 'animation__shake',
-            'width' => 60,
-            'height' => 60,
+            'path' => 'images/correos-de-bolivia.png',
+            'alt' => 'Correos de Bolivia',
+            'effect' => '',
+            'width' => 150,
+            'height' => 49,
         ],
     ],
 
@@ -135,7 +135,7 @@ return [
 
     'usermenu_enabled' => true,
     'usermenu_header' => true,
-    'usermenu_header_class' => 'bg-primary',
+    'usermenu_header_class' => 'bg-user-menu-corporate',
     'usermenu_image' => false,
     'usermenu_desc' => 'Administracion interna',
     'usermenu_profile_url' => false,
@@ -300,6 +300,18 @@ return [
 
     'menu' => [
         [
+            'text' => 'Buscar sección',
+            'type' => 'sidebar-menu-search',
+        ],
+        [
+            'header' => 'INTEGRACIÓN',
+        ],
+        [
+            'text' => 'Buscar',
+            'type' => 'navbar-search',
+            'topnav_right' => true,
+        ],
+        [
             'type' => 'fullscreen-widget',
             'topnav_right' => true,
         ],
@@ -316,12 +328,19 @@ return [
         [
             'text' => 'Empresas',
             'route' => 'admin.companies.index',
+            'active' => ['regex:#^admin/companies(?:/|$)#'],
             'icon' => 'fas fa-fw fa-building',
         ],
         [
-            'text' => 'Tokens API',
-            'route' => 'admin.tokens.index',
-            'icon' => 'fas fa-fw fa-key',
+            'text' => 'Configuración y accesos',
+            'icon' => 'fas fa-fw fa-sliders-h',
+            'submenu' => [
+                [
+                    'text' => 'Credenciales API',
+                    'route' => 'admin.tokens.index',
+                    'icon' => 'fas fa-fw fa-plug',
+                ],
+            ],
         ],
     ],
 

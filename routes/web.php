@@ -4,6 +4,7 @@ use App\Http\Controllers\Admin\AuthController;
 use App\Http\Controllers\Admin\CompanyController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\TokenController;
+use App\Http\Controllers\Admin\TrackingEventController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Company\DashboardController as CompanyDashboardController;
 use Illuminate\Support\Facades\Route;
@@ -24,6 +25,8 @@ Route::middleware('auth')->group(function (): void {
 Route::middleware(['auth', 'admin'])->group(function (): void {
     Route::prefix('admin')->name('admin.')->group(function (): void {
         Route::get('/', DashboardController::class)->name('dashboard');
+        Route::post('/packages/{package}/events', [TrackingEventController::class, 'storePackage'])->name('packages.events');
+        Route::post('/bags/{bag}/events', [TrackingEventController::class, 'storeBag'])->name('bags.events');
         Route::get('/users', [UserController::class, 'index'])->name('users.index');
         Route::post('/users', [UserController::class, 'store'])->name('users.store');
         Route::patch('/users/{user}/status', [UserController::class, 'updateStatus'])->name('users.status');
@@ -39,6 +42,8 @@ Route::middleware(['auth', 'admin'])->group(function (): void {
 
         Route::get('/tokens', [TokenController::class, 'index'])->name('tokens.index');
         Route::post('/tokens', [TokenController::class, 'store'])->name('tokens.store');
+        Route::get('/tokens/openapi', [TokenController::class, 'openApi'])->name('tokens.openapi');
+        Route::post('/tokens/{token}/rotate', [TokenController::class, 'rotate'])->name('tokens.rotate');
         Route::patch('/tokens/{token}/settings', [TokenController::class, 'updateSettings'])->name('tokens.settings');
         Route::patch('/tokens/{token}/revoke', [TokenController::class, 'revoke'])->name('tokens.revoke');
         Route::patch('/tokens/{token}/reactivate', [TokenController::class, 'reactivate'])->name('tokens.reactivate');

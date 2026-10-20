@@ -9,8 +9,6 @@
             --bg: #1f1f1f;
             --text: #ffffff;
             --muted: #f2f2f2;
-            --brand-yellow: #f8c63d;
-            --brand-blue: #1657b8;
         }
 
         * {
@@ -35,35 +33,12 @@
             text-align: center;
         }
 
-        .brand-mark {
-            width: 200px;
+        .brand-logo {
+            display: block;
+            width: min(260px, 70vw);
             margin: 0 auto 26px;
-            padding: 12px 14px 10px;
-            background: var(--brand-yellow);
-            color: var(--brand-blue);
-            font-weight: 800;
-            line-height: 1;
+            height: auto;
             box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22);
-        }
-
-        .brand-mark .top {
-            display: block;
-            font-size: 15px;
-            letter-spacing: 0.08em;
-        }
-
-        .brand-mark .main {
-            display: block;
-            font-size: 27px;
-            font-style: italic;
-            letter-spacing: -0.03em;
-        }
-
-        .brand-mark .bottom {
-            display: block;
-            margin-top: 2px;
-            font-size: 16px;
-            font-style: italic;
         }
 
         h1 {
@@ -81,10 +56,7 @@
 </head>
 <body>
     <main class="welcome-shell">
-        <div class="brand-mark" aria-label="Correos de Bolivia">
-            <span class="main">CORREOS</span>
-            <span class="bottom">DE BOLIVIA</span>
-        </div>
+        <img class="brand-logo" src="{{ asset('images/correos-de-bolivia.png') }}" alt="Correos de Bolivia">
         <h1>Bienvenido a Correos de Bolivia.</h1>
         <p>Estamos trabajando para ofrecerle el mejor servicio.</p>
     </main>

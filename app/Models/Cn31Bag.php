@@ -20,7 +20,10 @@ class Cn31Bag extends Model
         'declared_package_count',
         'declared_weight_kg',
         'status',
+        'operational_status',
+        'delivery_status',
         'received_at',
+        'last_operational_movement_at',
         'meta',
     ];
 
@@ -28,6 +31,7 @@ class Cn31Bag extends Model
     {
         return [
             'received_at' => 'datetime',
+            'last_operational_movement_at' => 'datetime',
             'meta' => 'array',
         ];
     }
@@ -45,5 +49,10 @@ class Cn31Bag extends Model
     public function cn33Packages(): HasMany
     {
         return $this->hasMany(Cn33Package::class)->latest();
+    }
+
+    public function movements(): HasMany
+    {
+        return $this->hasMany(Cn31BagMovement::class)->latest('occurred_at');
     }
 }

@@ -51,6 +51,10 @@ Todas las operaciones estan aisladas por `company_id`.
 /api/v1
 ```
 
+El contrato descargable para el API de tracking y webhooks esta en [`openapi-tracking.yaml`](openapi-tracking.yaml).
+El flujo local de paquetes y sacas, incluidos sus códigos y tipos de operación, se describe en [`flujo-eventos-ips-local.md`](flujo-eventos-ips-local.md).
+El flujo técnico de integración de 360 Lions para `WS34353433222` se documenta en [`flujo-360-lions-ws34353433222.md`](flujo-360-lions-ws34353433222.md).
+
 ### Convenciones generales
 
 - request y response en `JSON`
@@ -81,7 +85,24 @@ El token se genera manualmente desde el panel administrativo y luego se reutiliz
 - `POST /api/v1/cn22/shipments`
 - `GET /api/v1/packages`
 - `POST /api/v1/packages/{trackingCode}/movements`
+- `GET /api/v1/cn33/bags/{bagReference}/movements`
+- `POST /api/v1/cn33/bags/{bagReference}/movements`
 - `POST /api/v1/webhooks`
+
+Los permisos se asignan al emitir el token. Usa solo los necesarios: `tracking:read`, `tracking:write`, `tracking:events:write`, `documents:read`, `documents:write` y `webhooks:manage`. Por compatibilidad, `packages:read` también concede `tracking:read` y `documents:read`; `packages:write` también concede `tracking:write`, `tracking:events:write`, `documents:write` y `webhooks:manage`. Para tokens nuevos, conviene asignar permisos específicos.
+
+Cada token está asociado a una empresa; las consultas usan esa empresa como alcance, por lo que un token de otra empresa no puede leer estos registros. Los tokens de prueba tienen además alcance por token: solo consultan registros creados por el mismo token. Los tokens de producción consultan los registros de producción de su empresa; no acceden a registros aislados de un token de prueba.
+
+| Permiso | Acceso |
+|---|---|
+| `tracking:read` | Consultar paquetes, movimientos y contexto |
+| `tracking:write` | Registrar un paquete |
+| `tracking:events:write` | Agregar eventos al tracking |
+| `documents:read` | Consultar CN31 y CN33 |
+| `documents:write` | Crear CN31, CN33, CN22 y cargas masivas |
+| `webhooks:manage` | Administrar destinos y reintentos |
+
+Un token sin el permiso requerido recibe `403 INSUFFICIENT_ABILITY`.
 
 ### 2. Sesion portal empresa
 
@@ -98,6 +119,7 @@ GET /api/v1/integration/context
 ```
 
 Devuelve entorno, cupo sandbox, estados soportados y eventos webhook.
+Tambien informa los permisos del token y las transiciones de estado permitidas.
 
 ## Estados operativos
 
@@ -116,21 +138,49 @@ Devuelve entorno, cupo sandbox, estados soportados y eventos webhook.
 
 - `registrado`
 - `pre_alerta_recibida`
+- `recibido_api`
+- `aceptado_en_origen`
 - `recibido_centro_clasificacion`
+- `despachado_origen`
+- `en_transito`
+- `arribado_destino`
 - `en_proceso_aduana`
+- `retenido_aduana`
 - `liberado_aduana`
+- `disponible_retiro`
 - `en_ruta_entrega`
+- `intentos_carteros`
 - `entregado`
 - `incidencia_entrega`
+- `en_devolucion`
+- `devuelto_remitente`
+- `perdido`
+
+`clasificado` se mantiene como alias legado de `recibido_centro_clasificacion`.
+
+`en_transito` ahora conserva el significado de transporte entre puntos; `en_ruta_entrega` identifica la ultima milla. Versiones anteriores de este servicio podian normalizar ambos como ruta de entrega, asi que revisa esa expectativa antes de publicar el cambio a clientes existentes.
 
 ### Eventos webhook
 
+- `registrado` -> `shipment.registered`
+- `pre_alerta_recibida` -> `shipment.pre_alert_received`
+- `recibido_api` -> `shipment.received_by_operator`
+- `aceptado_en_origen` -> `shipment.accepted_at_origin`
 - `recibido_centro_clasificacion` -> `shipment.received_sorting_center`
+- `despachado_origen` -> `shipment.departed_origin`
+- `en_transito` -> `shipment.in_transit`
+- `arribado_destino` -> `shipment.arrived_destination`
 - `en_proceso_aduana` -> `shipment.customs_in_progress`
+- `retenido_aduana` -> `shipment.customs_held`
 - `liberado_aduana` -> `shipment.customs_released`
+- `disponible_retiro` -> `shipment.available_for_pickup`
 - `en_ruta_entrega` -> `shipment.out_for_delivery`
-- `entregado` -> `shipment.delivered`
+- `intentos_carteros` -> `shipment.delivery_attempt`
 - `incidencia_entrega` -> `shipment.delivery_incident`
+- `en_devolucion` -> `shipment.return_started`
+- `devuelto_remitente` -> `shipment.returned_to_sender`
+- `entregado` -> `shipment.delivered`
+- `perdido` -> `shipment.lost`
 
 ## Formato de errores
 
@@ -678,6 +728,21 @@ GET /api/v1/cn31/manifests
 - paginado
 - orden descendente por `dispatch_date`
 - incluye `bags_count`
+- filtros opcionales exactos por `dispatch_number_manifest` y por rangos inclusivos `dispatch_date_from` / `dispatch_date_to` y `received_at_from` / `received_at_to`
+- fechas en formato `YYYY-MM-DD`; `dispatch_date` es la fecha declarada y `received_at` el momento en que la API registró el CN31
+- `per_page` configurable entre 1 y 100 (predeterminado 20); `page` comienza en 1 y los enlaces conservan los filtros
+- cada elemento devuelve únicamente `cn31_number`, `dispatch_number_manifest`, `origin_office`, `destination_office`, `dispatch_date`, `received_at`, `status`, `status_label`, `delivery_status`, `delivery_status_label`, `total_bags`, `total_packages`, `total_weight_kg` y `bags_count`
+- no incluye IDs internos, `meta` ni columnas de auditoría
+
+La respuesta conserva el paginador estándar en el nivel raíz: `data` contiene los despachos y allí mismo aparecen `current_page`, `per_page`, `total`, `last_page`, `links` y las URL de navegación. No hay un objeto `meta` envolviendo esos datos.
+
+Ejemplos:
+
+```http
+GET /api/v1/cn31/manifests?dispatch_number_manifest=2026000333
+GET /api/v1/cn31/manifests?dispatch_date_from=2026-10-01&dispatch_date_to=2026-10-31&per_page=100
+GET /api/v1/cn31/manifests?received_at_from=2026-10-01&received_at_to=2026-10-31
+```
 
 ### Ver CN31
 
@@ -693,6 +758,8 @@ Incluye:
 - `loaded_weight_kg`
 - `documented_packages`
 - `status`
+- `delivery_summary` con sacas registradas/completadas/en proceso/pendientes y paquetes registrados/entregados/en proceso/pendientes
+- un `delivery_summary` de paquetes por saca
 
 ### Ver saca CN33
 
@@ -708,6 +775,15 @@ Incluye:
 - peso declarado
 - estado
 - lista de paquetes
+- `delivery_summary` con paquetes registrados/entregados/en proceso/pendientes
+
+Para consultar la bitácora de la saca:
+
+```http
+GET /api/v1/cn33/bags/{bagReference}/movements
+```
+
+Requiere `tracking:read` y devuelve los movimientos de la saca en orden cronológico, con paginación. Esta historia es independiente de los movimientos de cada paquete.
 
 ### Listar paquetes
 
@@ -715,6 +791,8 @@ Incluye:
 GET /api/v1/packages
 GET /api/v1/packages?tracking_code=PKG-001
 ```
+
+La respuesta conserva el paginador estándar en el nivel raíz: `data` contiene los paquetes y allí mismo aparecen `current_page`, `per_page`, `total`, `last_page`, `links` y las URL de navegación. Cada elemento es un resumen con `tracking_code`, `reference`, `origin`, `destination`, `status`, `status_label`, `registered_at` y `last_movement_at`. No serializa el modelo completo ni incluye identificadores internos o datos de contacto/documento del remitente o destinatario. Para ver el detalle de un envío, consulta `/api/v1/packages/{trackingCode}`.
 
 ### Ver paquete
 
@@ -727,6 +805,8 @@ GET /api/v1/packages/{trackingCode}
 ```http
 GET /api/v1/packages/{trackingCode}/movements
 ```
+
+El detalle del paquete muestra hasta los 20 movimientos marcados `is_public = true`. Este endpoint autenticado pagina el historial completo con `per_page` entre 1 y 100 y devuelve solo esos movimientos.
 
 ## API operativa de paquetes
 
@@ -764,34 +844,66 @@ Campos obligatorios:
 POST /api/v1/packages/{trackingCode}/movements
 ```
 
+Envia `Idempotency-Key` para que un reintento no duplique el evento. La clave se limita al envio y a la empresa. Si se repite con el mismo contenido, la API responde `200`; si se reutiliza con contenido distinto, responde `409`.
+
+En el evento puedes enviar `status` (codigo de negocio en espanol) o `event_code` (codigo estable en ingles). Si envias ambos, deben representar el mismo estado.
+Tambien puedes enviar un `ips_operation_code` para registrar uno de los códigos de operación configurados junto con su tipo numerico; el movimiento se guarda en las bitácoras locales. En un evento `EMI`, `signatory` guarda un nombre como texto complementario: por sí solo no prueba la identidad del receptor ni adjunta evidencia de firma.
+
 ```json
 {
   "status": "en_proceso_aduana",
+  "event_code": "shipment.customs_in_progress",
   "location": "Aeropuerto El Alto",
   "description": "Ingreso a canal aduanero",
-  "occurred_at": "2026-03-31 11:30:00",
+  "occurred_at": "2026-03-31T11:30:00-04:00",
+  "location_code": "LPZ-HUB-01",
+  "reason_code": "recipient_unavailable",
+  "source_reference": "scan-839201",
   "meta": {
     "source": "hub-central"
   }
 }
 ```
 
+`occurred_at` debe ser una fecha RFC 3339 con zona horaria. Se guardan por separado la hora del hecho (`occurred_at`) y la hora en que el sistema lo recibio (`recorded_at`), ambas normalizadas a UTC. Los eventos atrasados se agregan al historial y no hacen retroceder el estado actual.
+
 Estados soportados:
 
 - `pre_alerta_recibida`
 - `recibido_centro_clasificacion`
+- `aceptado_en_origen`
+- `despachado_origen`
+- `arribado_destino`
 - `en_proceso_aduana`
+- `retenido_aduana`
 - `liberado_aduana`
+- `disponible_retiro`
 - `en_ruta_entrega`
 - `entregado`
 - `incidencia_entrega`
+- `intentos_carteros`
+- `en_transito`
+- `en_devolucion`
+- `devuelto_remitente`
+- `perdido`
 
 Logica:
 
-- inserta movimiento
-- actualiza estado actual del paquete
-- actualiza `last_movement_at`
-- dispara webhook si corresponde
+- valida la transicion contra el estado actual
+- agrega un evento con ID, codigo estable, origen y hora de registro
+- actualiza el estado del envio de forma transaccional
+- registra idempotencia y conserva eventos fuera de orden cuando se envian estados o codigos `event_code`; las operaciones con `ips_operation_code` deben respetar su secuencia local
+- encola el webhook sin esperar al servidor receptor
+
+`GET /api/v1/integration/context` devuelve el catalogo vigente y las transiciones para que cada empresa pueda adaptar su integracion.
+`reason_code` permite clasificar incidentes y causas de intento; el contexto de integracion publica codigos recomendados.
+Para movimientos de paquete enviados con `status` o `event_code`, el servidor acepta hasta cinco minutos de desviacion futura en `occurred_at` y guarda eventos atrasados sin retroceder el estado actual. Si se envia `ips_operation_code`, la fecha no puede estar en el futuro y debe ser posterior al movimiento anterior. Los movimientos de saca tampoco aceptan fechas futuras y deben seguir el orden de la bitacora.
+
+### Eventos de sacas y coordinación local
+
+Las sacas tienen su propia bitácora: `RECEPTACLE_RECEIVE` (tipo 130) confirma recepción física y `RECEPTACLE_OPEN` (tipo 131) abre la saca recibida en la misma oficina. Abrir una saca no crea movimientos en sus paquetes; cada tracking sigue su flujo individual.
+
+Consulta una saca con `GET /api/v1/cn33/bags/{bagReference}/movements`. Las escrituras de paquete y saca requieren `tracking:events:write`. La conciliación CN33, la recepción/apertura física y el avance de entrega se mantienen en campos distintos.
 
 ## Webhooks
 
@@ -829,6 +941,41 @@ Incluye:
 - ultimas entregas
 - estado de exito o error
 
+Los destinos deben usar HTTPS y resolver a una IP publica. El secreto se cifra en la base de datos y se muestra completo una sola vez al crear el endpoint. Cada peticion incluye `X-Webhook-Event`, `X-Webhook-Delivery` y `X-Webhook-Signature`; esta ultima es el HMAC-SHA256 hexadecimal del cuerpo JSON exacto con el secreto compartido.
+
+La entrega es al menos una vez: el receptor debe usar `X-Webhook-Delivery` como identificador de deduplicacion, porque un timeout puede provocar que el mismo evento se reenvie.
+
+```http
+GET    /api/v1/webhooks/{id}/deliveries
+POST   /api/v1/webhooks/{id}/deliveries/{deliveryId}/retry
+POST   /api/v1/webhooks/{id}/test
+PATCH  /api/v1/webhooks/{id}
+DELETE /api/v1/webhooks/{id}
+```
+
+`PATCH` permite cambiar URL, eventos y activacion, o rotar el secreto. El secreto nuevo se devuelve una sola vez.
+
+Las entregas son asincronas y reintentan fallos hasta seis veces con espera progresiva. Despues, quedan en estado `failed` y pueden reintentarse manualmente. En produccion deben ejecutarse un worker (`php artisan queue:work`) y el scheduler de Laravel (`php artisan schedule:work`, o `schedule:run` desde cron cada minuto); el comando `webhooks:dispatch-pending` recupera entregas que quedaron pendientes.
+
+Antes de aplicar migraciones, realiza un respaldo y confirma que `APP_KEY` este configurada y sea estable: cifra los secretos existentes de webhook. Para envios que no tenian movimientos, la migracion agrega un evento base con el estado actual; no es posible reconstruir escaneos historicos que nunca se guardaron.
+
+Aplica el cambio en el entorno destino con `php artisan migrate --force`, mantén un worker activo y registra `schedule:run` cada minuto en cron.
+
+## API interna de entrega
+
+Estas rutas son solo para servicios internos y requieren `X-Internal-Token`:
+
+```http
+POST /api/v1/internal/packages/delivery-attempt
+POST /api/v1/internal/packages/deliver
+```
+
+Configura `INTERNAL_API_TOKEN` con un secreto aleatorio fuerte en el entorno del servidor. La aplicacion falla de forma cerrada si el valor no esta configurado.
+
+Cuando un `tracking_code` exista en varias empresas, incluye `company_id`; sin esa identificacion la API responde `409` en lugar de modificar un envio arbitrario. También admiten `Idempotency-Key`.
+
+La API interna opera sobre envios de produccion y omite los datos aislados de tokens de prueba.
+
 ## Seguridad y reglas de negocio
 
 ### Token API de empresa
@@ -846,6 +993,8 @@ Incluye:
   - cupo maximo de `100` envios ficticios
   - contador usado
 - si `CN22` supera el cupo, responde `SANDBOX_SHIPMENT_LIMIT_REACHED`
+- al revocar, desactivar o eliminar un token de tipo `trial`, se purgan sus registros de prueba: manifiestos, sacas, paquetes y sus movimientos, además de sus datos de webhooks
+- reactivar el token no restaura esos registros; los datos de producción no se eliminan
 
 ### Duplicados
 

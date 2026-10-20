@@ -23,6 +23,7 @@ class Cn31Manifest extends Model
         'total_packages',
         'total_weight_kg',
         'status',
+        'delivery_status',
         'received_at',
         'meta',
     ];

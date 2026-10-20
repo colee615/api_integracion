@@ -35,10 +35,10 @@ class DashboardController extends Controller
         $totalDeliveryAttempts = (int) Package::where('company_id', $company->id)
             ->sum('delivery_attempts');
         $deliveredBagsCount = Cn31Bag::where('company_id', $company->id)
-            ->where('status', 'entregado')
+            ->where('delivery_status', 'completado')
             ->count();
         $deliveredManifestsCount = Cn31Manifest::where('company_id', $company->id)
-            ->where('status', 'entregado')
+            ->where('delivery_status', 'completado')
             ->count();
 
         $legacyTokens = ApiToken::query()
@@ -197,11 +197,13 @@ class DashboardController extends Controller
                         'total_weight_kg' => (float) $manifest->total_weight_kg,
                         'status' => $manifest->status,
                         'status_label' => PackageStatusCatalog::labelForStatus($manifest->status),
+                        'delivery_status' => $manifest->delivery_status,
+                        'delivery_status_label' => __('api.statuses.'.$manifest->delivery_status),
                         'delivered_at' => $manifest->meta['delivered_at'] ?? null,
                     ])
                     ->values(),
                 'recent_bags' => Cn31Bag::query()
-                    ->with(['manifest:id,cn31_number'])
+                    ->with(['manifest:id,cn31_number', 'movements'])
                     ->where('company_id', $company->id)
                     ->latest()
                     ->limit(10)
@@ -218,7 +220,22 @@ class DashboardController extends Controller
                         'documented_packages' => Cn33Package::where('cn31_bag_id', $bag->id)->whereHas('package')->count(),
                         'status' => $bag->status,
                         'status_label' => PackageStatusCatalog::labelForStatus($bag->status),
+                        'operational_status' => $bag->operational_status,
+                        'operational_status_label' => __('api.statuses.'.$bag->operational_status),
+                        'delivery_status' => $bag->delivery_status,
+                        'delivery_status_label' => __('api.statuses.'.$bag->delivery_status),
                         'delivered_at' => $bag->meta['delivered_at'] ?? null,
+                        'events' => $bag->movements->sortBy('occurred_at')->values()->map(fn ($event) => [
+                            'event_id' => $event->event_id,
+                            'event_code' => $event->event_code,
+                            'ips_operation_code' => $event->ips_operation_code,
+                            'ips_event_type_cd' => $event->ips_event_type_cd,
+                            'location_code' => $event->location_code,
+                            'location' => $event->location,
+                            'status' => $event->status,
+                            'occurred_at' => $event->occurred_at?->utc()->toIso8601String(),
+                            'recorded_at' => $event->recorded_at?->utc()->toIso8601String(),
+                        ])->values(),
                     ])
                     ->values(),
                 'recent_movements' => PackageMovement::query()
@@ -229,9 +246,12 @@ class DashboardController extends Controller
                     ->get()
                     ->map(fn ($movement) => [
                         'id' => $movement->id,
+                        'event_code' => $movement->event_code,
+                        'ips_operation_code' => $movement->ips_operation_code,
+                        'ips_event_type_cd' => $movement->ips_event_type_cd,
                         'status' => $movement->status,
                         'location' => $movement->location,
-                        'description' => $movement->description,
+                        'description' => $movement->displayDescription(),
                         'tracking_code' => $movement->package?->tracking_code,
                         'status_label' => PackageStatusCatalog::labelForStatus($movement->status),
                     ])
@@ -287,10 +307,13 @@ class DashboardController extends Controller
                         'delivered_at' => $package->meta['delivered_at'] ?? null,
                         'movements' => $package->movements->map(fn ($movement) => [
                             'id' => $movement->id,
+                            'event_code' => $movement->event_code,
+                            'ips_operation_code' => $movement->ips_operation_code,
+                            'ips_event_type_cd' => $movement->ips_event_type_cd,
                             'status' => $movement->status,
                             'status_label' => PackageStatusCatalog::labelForStatus($movement->status),
                             'location' => $movement->location,
-                            'description' => $movement->description,
+                            'description' => $movement->displayDescription(),
                         ])->values(),
                     ])
                     ->values(),
@@ -314,12 +337,18 @@ class DashboardController extends Controller
                         'total_weight_kg' => (float) $manifest->total_weight_kg,
                         'status' => $manifest->status,
                         'status_label' => PackageStatusCatalog::labelForStatus($manifest->status),
+                        'delivery_status' => $manifest->delivery_status,
+                        'delivery_status_label' => __('api.statuses.'.$manifest->delivery_status),
                         'delivered_at' => $manifest->meta['delivered_at'] ?? null,
                         'bags' => $manifest->bags->map(fn ($bag) => [
                             'id' => $bag->id,
                             'bag_number' => $bag->bag_number,
                             'dispatch_number_bag' => $bag->dispatch_number_bag,
                             'status' => $bag->status,
+                            'operational_status' => $bag->operational_status,
+                            'operational_status_label' => __('api.statuses.'.$bag->operational_status),
+                            'delivery_status' => $bag->delivery_status,
+                            'delivery_status_label' => __('api.statuses.'.$bag->delivery_status),
                             'delivered_at' => $bag->meta['delivered_at'] ?? null,
                             'declared_package_count' => (int) $bag->declared_package_count,
                             'declared_weight_kg' => (float) $bag->declared_weight_kg,
@@ -337,6 +366,8 @@ class DashboardController extends Controller
                                 'weight_kg' => (float) $cn33Package->weight_kg,
                                 'status' => $cn33Package->status,
                                 'status_label' => PackageStatusCatalog::labelForStatus($cn33Package->status),
+                                'delivery_status' => $cn33Package->delivery_status,
+                                'delivery_status_label' => __('api.statuses.'.$cn33Package->delivery_status),
                                 'delivered_at' => $cn33Package->meta['delivered_at'] ?? null,
                                 'notes' => $cn33Package->meta['notes'] ?? null,
                                 'package' => $cn33Package->package ? [
@@ -380,10 +411,13 @@ class DashboardController extends Controller
                                     'delivered_at' => $cn33Package->package->meta['delivered_at'] ?? null,
                                     'movements' => $cn33Package->package->movements->map(fn ($movement) => [
                                         'id' => $movement->id,
+                                        'event_code' => $movement->event_code,
+                                        'ips_operation_code' => $movement->ips_operation_code,
+                                        'ips_event_type_cd' => $movement->ips_event_type_cd,
                                         'status' => $movement->status,
                                         'status_label' => PackageStatusCatalog::labelForStatus($movement->status),
                                         'location' => $movement->location,
-                                        'description' => $movement->description,
+                                        'description' => $movement->displayDescription(),
                                     ])->values(),
                                 ] : null,
                             ])->values(),

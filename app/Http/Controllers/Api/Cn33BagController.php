@@ -8,6 +8,7 @@ use App\Models\Cn31Bag;
 use App\Models\Cn33Package;
 use App\Models\Package;
 use App\Support\ApiTokenContext;
+use App\Support\DeliverySummary;
 use App\Support\PackageStatusCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -111,6 +112,9 @@ class Cn33BagController extends Controller
                     'weight_kg' => $record['weight_kg'],
                     'item_order' => $index + 1,
                     'status' => $package ? 'documentado_cn22' : 'pendiente_cn22',
+                    'delivery_status' => $package?->status === 'entregado'
+                        ? 'completado'
+                        : ($package && ! in_array($package->status, ['registrado', 'pre_alerta_recibida'], true) ? 'en_proceso' : 'pendiente'),
                     'meta' => [
                         'notes' => $record['notes'] ?? null,
                         'source' => 'api_cn33',
@@ -120,6 +124,7 @@ class Cn33BagController extends Controller
         });
 
         $this->reconcileBag($bag->fresh(['cn33Packages', 'manifest.bags.cn33Packages']));
+        $this->syncDeliveryStatus($bag->fresh(['cn33Packages', 'manifest']));
 
         $bag = $bag->fresh(['cn33Packages', 'manifest']);
         $loadedPackages = $bag->cn33Packages->count();
@@ -136,6 +141,10 @@ class Cn33BagController extends Controller
                 'manifest_number' => $bag->manifest?->cn31_number,
                 'status' => $bag->status,
                 'status_label' => PackageStatusCatalog::labelForStatus($bag->status),
+                'operational_status' => $bag->operational_status,
+                'operational_status_label' => __('api.statuses.'.$bag->operational_status),
+                'delivery_status' => $bag->delivery_status,
+                'delivery_status_label' => __('api.statuses.'.$bag->delivery_status),
                 'declared_package_count' => $bag->declared_package_count,
                 'loaded_package_count' => $loadedPackages,
                 'declared_weight_kg' => (float) $bag->declared_weight_kg,
@@ -152,7 +161,7 @@ class Cn33BagController extends Controller
         $apiToken = ApiTokenContext::currentToken($request);
 
         $bag = ApiTokenContext::scopeToToken(
-            Cn31Bag::query()->with(['manifest', 'cn33Packages.package'])->where('company_id', $company->id),
+            Cn31Bag::query()->with(['manifest', 'cn33Packages.package', 'movements.actor'])->where('company_id', $company->id),
             $apiToken
         )
             ->where(function ($query) use ($bagReference) {
@@ -168,6 +177,8 @@ class Cn33BagController extends Controller
             );
         }
 
+        $deliverySummary = DeliverySummary::forPackageRows($bag->cn33Packages);
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -179,6 +190,25 @@ class Cn33BagController extends Controller
                 'declared_weight_kg' => (float) $bag->declared_weight_kg,
                 'status' => $bag->status,
                 'status_label' => PackageStatusCatalog::labelForStatus($bag->status),
+                'operational_status' => $bag->operational_status,
+                'operational_status_label' => __('api.statuses.'.$bag->operational_status),
+                'delivery_status' => $bag->delivery_status,
+                'delivery_status_label' => __('api.statuses.'.$bag->delivery_status),
+                'delivery_summary' => $deliverySummary,
+                'last_operational_movement_at' => $bag->last_operational_movement_at?->utc()->toIso8601String(),
+                'events' => $bag->movements->reverse()->values()->map(fn ($movement) => [
+                    'event_id' => $movement->event_id,
+                    'event_code' => $movement->event_code,
+                    'ips_operation_code' => $movement->ips_operation_code,
+                    'ips_event_type_cd' => $movement->ips_event_type_cd,
+                    'status' => $movement->status,
+                    'location_code' => $movement->location_code,
+                    'location' => $movement->location,
+                    'description' => $movement->description,
+                    'occurred_at' => $movement->occurred_at?->utc()->toIso8601String(),
+                    'recorded_at' => $movement->recorded_at?->utc()->toIso8601String(),
+                    'source' => $movement->source_type,
+                ]),
                 'packages' => $bag->cn33Packages->map(fn ($item) => [
                     'id' => $item->id,
                     'tracking_code' => $item->tracking_code,
@@ -187,6 +217,7 @@ class Cn33BagController extends Controller
                     'weight_kg' => $item->weight_kg !== null ? (float) $item->weight_kg : null,
                     'status' => $item->status,
                     'status_label' => PackageStatusCatalog::labelForStatus($item->status),
+                    'delivery_status' => $item->delivery_status,
                     'package_registered' => $item->package_id !== null,
                 ])->values(),
             ],
@@ -224,5 +255,35 @@ class Cn33BagController extends Controller
         $manifest->forceFill([
             'status' => $manifestStatus,
         ])->save();
+    }
+
+    private function syncDeliveryStatus(Cn31Bag $bag): void
+    {
+        $statuses = $bag->cn33Packages->pluck('delivery_status');
+        $deliveryStatus = $this->aggregateDeliveryStatus($statuses);
+        $bag->forceFill(['delivery_status' => $deliveryStatus])->save();
+
+        $manifest = $bag->manifest?->fresh(['bags']);
+        if (! $manifest) {
+            return;
+        }
+
+        $manifestStatus = $this->aggregateDeliveryStatus($manifest->bags->pluck('delivery_status'));
+        $manifest->forceFill(['delivery_status' => $manifestStatus])->save();
+    }
+
+    private function aggregateDeliveryStatus(\Illuminate\Support\Collection $statuses): string
+    {
+        if ($statuses->isEmpty()) {
+            return 'pendiente';
+        }
+
+        if ($statuses->every(fn ($status): bool => $status === 'completado')) {
+            return 'completado';
+        }
+
+        return $statuses->contains(fn ($status): bool => in_array($status, ['completado', 'en_proceso'], true))
+            ? 'en_proceso'
+            : 'pendiente';
     }
 }

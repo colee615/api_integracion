@@ -89,6 +89,32 @@ class ApiToken extends Model
             && $this->company?->status === 'active';
     }
 
+    public function allows(string $ability): bool
+    {
+        $abilities = $this->abilities ?? [];
+
+        if (in_array('*', $abilities, true) || in_array($ability, $abilities, true)) {
+            return true;
+        }
+
+        // Keep the historical packages:read/write grants working while new
+        // tokens can be issued with narrower capabilities.
+        $legacyGrants = [
+            'packages:read' => ['tracking:read'],
+            'packages:write' => ['tracking:write'],
+            'tracking:read' => ['packages:read'],
+            'tracking:write' => ['packages:write'],
+            'tracking:events:write' => ['tracking:write', 'packages:write'],
+            'documents:read' => ['packages:read'],
+            'documents:write' => ['packages:write'],
+            'webhooks:manage' => ['packages:write'],
+        ];
+
+        return collect($legacyGrants[$ability] ?? [])->contains(
+            fn (string $grant): bool => in_array($grant, $abilities, true)
+        );
+    }
+
     public function isTrial(): bool
     {
         return $this->token_type === 'trial';

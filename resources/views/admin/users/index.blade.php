@@ -2,10 +2,6 @@
 
 @section('title', 'Usuarios')
 
-@section('css')
-    @include('admin.partials.enterprise-theme')
-@stop
-
 @section('content_header')
     <section class="page-hero">
         <span class="page-kicker"><i class="fas fa-users-cog"></i> Seguridad interna</span>

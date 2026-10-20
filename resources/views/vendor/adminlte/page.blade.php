@@ -6,6 +6,9 @@
 @section('adminlte_css')
     @stack('css')
     @yield('css')
+    @if(request()->routeIs('admin.*'))
+        @include('admin.partials.enterprise-theme')
+    @endif
 @stop
 
 @section('classes_body', $layoutHelper->makeBodyClasses())
@@ -65,14 +68,14 @@
                         title: 'Operación completada',
                         html: `
                             <div style="display:flex;flex-direction:column;align-items:center;text-align:center;">
-                                <div style="width:74px;height:74px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#eff6ff 0%,#dbeafe 100%);margin-bottom:18px;">
-                                    <div style="width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#1f4fb8;color:#fff;font-size:22px;font-weight:700;">✓</div>
+                                <div style="width:74px;height:74px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:linear-gradient(180deg,#fff8df 0%,#ffedb0 100%);margin-bottom:18px;">
+                                    <div style="width:46px;height:46px;border-radius:50%;display:flex;align-items:center;justify-content:center;background:#ffcc33;color:#253238;font-size:22px;font-weight:700;">✓</div>
                                 </div>
-                                <div style="max-width:360px;color:#5a7bbd;font-size:16px;line-height:1.55;">${message}</div>
+                                <div style="max-width:360px;color:#667176;font-size:16px;line-height:1.55;">${message}</div>
                             </div>
                         `,
                         confirmButtonText: 'Continuar',
-                        confirmButtonColor: '#1f4fb8',
+                        confirmButtonColor: '#ffcc33',
                         background: '#ffffff',
                         width: 560,
                         padding: '2.2rem 2rem 1.8rem',

@@ -3,6 +3,9 @@
 namespace Tests\Feature;
 
 use App\Models\ApiToken;
+use App\Models\Cn31Bag;
+use App\Models\Cn31BagMovement;
+use App\Models\Cn31Manifest;
 use App\Models\PackageMovement;
 use App\Models\Company;
 use App\Models\Package;
@@ -150,12 +153,12 @@ class ApiTokenFlowTest extends TestCase
             'description' => 'Salio del centro logístico',
         ], $headers)
             ->assertCreated()
-            ->assertJsonPath('data.status', 'en_ruta_entrega');
+            ->assertJsonPath('data.status', 'en_transito');
 
         $this->getJson('/api/v1/packages/PKG-001', $headers)
             ->assertOk()
-            ->assertJsonPath('data.status', 'en_ruta_entrega')
-            ->assertJsonCount(1, 'data.movements');
+            ->assertJsonPath('data.status', 'en_transito')
+            ->assertJsonCount(2, 'data.movements');
     }
 
     public function test_expired_token_is_rejected(): void
@@ -1222,6 +1225,37 @@ class ApiTokenFlowTest extends TestCase
             ],
         ], $trialHeaders)->assertCreated();
 
+        $trialBag = Cn31Bag::query()
+            ->where('company_id', $company->id)
+            ->where('bag_number', 'TRIAL-BAG-001')
+            ->firstOrFail();
+
+        $this->postJson('/api/v1/cn33/bags/TRIAL00001/movements', [
+            'ips_operation_code' => 'RECEPTACLE_RECEIVE',
+            'location_code' => 'TEST-OFFICE',
+            'location' => 'Oficina de prueba',
+            'physical_confirmation' => true,
+            'occurred_at' => now()->subMinutes(2)->toIso8601String(),
+        ], $trialHeaders)->assertCreated();
+
+        $this->postJson('/api/v1/cn33/bags/TRIAL00001/movements', [
+            'ips_operation_code' => 'RECEPTACLE_OPEN',
+            'location_code' => 'TEST-OFFICE',
+            'location' => 'Oficina de prueba',
+            'occurred_at' => now()->subMinute()->toIso8601String(),
+        ], $trialHeaders)->assertCreated();
+
+        $this->postJson('/api/v1/packages/EN000001001BO/movements', [
+            'status' => 'entregado',
+            'location' => 'La Paz',
+            'description' => 'Entrega de prueba',
+        ], $trialHeaders)->assertCreated();
+
+        $trialPackage = Package::query()
+            ->where('company_id', $company->id)
+            ->where('tracking_code', 'EN000001001BO')
+            ->firstOrFail();
+
         $this->postJson('/api/v1/packages', [
             'tracking_code' => 'EN000001002BO',
             'recipient_name' => 'Cliente Produccion',
@@ -1246,6 +1280,25 @@ class ApiTokenFlowTest extends TestCase
             'tracking_code' => 'EN000001002BO',
         ]);
 
+        $this->assertDatabaseHas('package_movements', [
+            'company_id' => $company->id,
+            'package_id' => $trialPackage->id,
+            'created_by_api_token_id' => $trialTokenModel->id,
+            'status' => 'entregado',
+        ]);
+
+        $this->assertDatabaseHas('cn31_bag_movements', [
+            'company_id' => $company->id,
+            'created_by_api_token_id' => $trialTokenModel->id,
+            'ips_operation_code' => 'RECEPTACLE_OPEN',
+        ]);
+
+        $this->assertDatabaseHas('cn33_packages', [
+            'company_id' => $company->id,
+            'created_by_api_token_id' => $trialTokenModel->id,
+            'tracking_code' => 'EN000001001BO',
+        ]);
+
         $this->actingAs($admin)
             ->patch(route('admin.tokens.revoke', $trialTokenModel))
             ->assertRedirect();
@@ -1262,10 +1315,130 @@ class ApiTokenFlowTest extends TestCase
             'tracking_code' => 'EN000001001BO',
         ]);
 
+        $this->assertDatabaseMissing('cn31_bags', [
+            'company_id' => $company->id,
+            'created_by_api_token_id' => $trialTokenModel->id,
+            'bag_number' => 'TRIAL-BAG-001',
+        ]);
+
+        $this->assertDatabaseMissing('cn33_packages', [
+            'company_id' => $company->id,
+            'created_by_api_token_id' => $trialTokenModel->id,
+            'tracking_code' => 'EN000001001BO',
+        ]);
+
+        $this->assertDatabaseMissing('package_movements', [
+            'company_id' => $company->id,
+            'package_id' => $trialPackage->id,
+        ]);
+
+        $this->assertDatabaseMissing('cn31_bag_movements', [
+            'company_id' => $company->id,
+            'cn31_bag_id' => $trialBag->id,
+        ]);
+
         $this->assertDatabaseHas('packages', [
             'company_id' => $company->id,
             'created_by_api_token_id' => null,
             'tracking_code' => 'EN000001002BO',
         ]);
+
+        $this->assertDatabaseHas('package_movements', [
+            'company_id' => $company->id,
+            'created_by_api_token_id' => null,
+            'status' => 'registrado',
+        ]);
+
+        $this->getJson('/api/v1/packages/EN000001001BO', $trialHeaders)->assertUnauthorized();
+
+        $this->actingAs($admin)
+            ->patch(route('admin.tokens.reactivate', $trialTokenModel))
+            ->assertRedirect();
+
+        $this->getJson('/api/v1/cn31/manifests/CN31-TRIAL-001', $trialHeaders)->assertNotFound();
+    }
+
+    public function test_deleting_trial_token_purges_its_package_and_bag_event_history(): void
+    {
+        $company = Company::create([
+            'name' => 'Empresa Trial para eliminar',
+            'slug' => 'empresa-trial-eliminar',
+            'status' => 'active',
+        ]);
+
+        [$trialToken] = ApiToken::issue(
+            $company,
+            'Token Trial para eliminar',
+            now()->subMinute(),
+            now()->addDays(30),
+            ['documents:read', 'tracking:read'],
+            'trial'
+        );
+
+        $manifest = Cn31Manifest::create([
+            'company_id' => $company->id,
+            'created_by_api_token_id' => $trialToken->id,
+            'cn31_number' => 'CN31-TRIAL-DELETE',
+            'origin_office' => 'SHANGHAI',
+            'destination_office' => 'LA PAZ',
+            'dispatch_date' => now()->subDay(),
+            'total_bags' => 1,
+            'total_packages' => 1,
+            'total_weight_kg' => 0.250,
+            'status' => 'conciliado',
+        ]);
+        $bag = Cn31Bag::create([
+            'company_id' => $company->id,
+            'created_by_api_token_id' => $trialToken->id,
+            'cn31_manifest_id' => $manifest->id,
+            'bag_number' => 'TRIAL-DELETE-BAG',
+            'declared_package_count' => 1,
+            'declared_weight_kg' => 0.250,
+            'status' => 'conciliado',
+            'operational_status' => 'recibido',
+        ]);
+        $package = Package::create([
+            'company_id' => $company->id,
+            'created_by_api_token_id' => $trialToken->id,
+            'tracking_code' => 'EN000001099BO',
+            'recipient_name' => 'Cliente de prueba',
+            'status' => 'entregado',
+            'registered_at' => now()->subDay(),
+            'last_movement_at' => now(),
+        ]);
+
+        Cn31BagMovement::create([
+            'company_id' => $company->id,
+            'cn31_bag_id' => $bag->id,
+            'created_by_api_token_id' => $trialToken->id,
+            'ips_operation_code' => 'RECEPTACLE_RECEIVE',
+            'source_type' => 'company_api',
+            'location_code' => 'TEST-OFFICE',
+            'status' => 'recibido',
+            'occurred_at' => now()->subHour(),
+        ]);
+        PackageMovement::create([
+            'company_id' => $company->id,
+            'package_id' => $package->id,
+            'created_by_api_token_id' => $trialToken->id,
+            'status' => 'entregado',
+            'occurred_at' => now(),
+        ]);
+
+        $admin = User::factory()->create([
+            'role' => 'admin',
+            'status' => 'active',
+        ]);
+
+        $this->actingAs($admin)
+            ->delete(route('admin.tokens.destroy', $trialToken))
+            ->assertRedirect();
+
+        $this->assertDatabaseMissing('api_tokens', ['id' => $trialToken->id]);
+        $this->assertDatabaseMissing('cn31_manifests', ['id' => $manifest->id]);
+        $this->assertDatabaseMissing('cn31_bags', ['id' => $bag->id]);
+        $this->assertDatabaseMissing('packages', ['id' => $package->id]);
+        $this->assertDatabaseMissing('cn31_bag_movements', ['cn31_bag_id' => $bag->id]);
+        $this->assertDatabaseMissing('package_movements', ['package_id' => $package->id]);
     }
 }

@@ -3,7 +3,6 @@
 @section('title', 'Dashboard')
 
 @section('css')
-    @include('admin.partials.enterprise-theme')
     <style>
         .interactive-row {
             cursor: pointer;
@@ -446,6 +445,21 @@
                         'bag_number' => $bag->bag_number,
                         'dispatch_number_bag' => $bag->dispatch_number_bag,
                         'status' => $bag->status,
+                        'operational_status' => $bag->operational_status,
+                        'delivery_status' => $bag->delivery_status,
+                        'allowed_ips_operations' => \App\Support\IpsEventCatalog::bagEventOptions((string) $bag->operational_status),
+                        'movements' => $bag->movements->reverse()->values()->map(fn ($movement) => [
+                            'event_code' => $movement->event_code,
+                            'ips_operation_code' => $movement->ips_operation_code,
+                            'ips_event_type_cd' => $movement->ips_event_type_cd,
+                            'status' => $movement->status,
+                            'location_code' => $movement->location_code,
+                            'location' => $movement->location,
+                            'description' => $movement->description,
+                            'occurred_at' => optional($movement->occurred_at)->utc()->toIso8601String(),
+                            'source' => $movement->source_type,
+                            'actor_name' => $movement->actor?->name,
+                        ])->values(),
                         'declared_package_count' => $bag->declared_package_count,
                         'declared_weight_kg' => (float) $bag->declared_weight_kg,
                         'loaded_package_count' => (int) ($bag->meta['loaded_package_count'] ?? 0),
@@ -461,9 +475,14 @@
                                 'weight_kg' => (float) $cn33->weight_kg,
                                 'status' => $cn33->status,
                                 'package_detail' => $package ? [
+                                    'id' => $package->id,
                                     'tracking_code' => $package->tracking_code,
                                     'reference' => $package->reference,
                                     'status' => $package->status,
+                                    'allowed_ips_operations' => \App\Support\IpsEventCatalog::packageEventOptions(
+                                        (string) $package->status,
+                                        $package->movements->first(fn ($movement) => $movement->ips_operation_code !== null)?->ips_operation_code
+                                    ),
                                     'sender_name' => $package->sender_name,
                                     'sender_country' => $package->sender_country,
                                     'recipient_name' => $package->recipient_name,
@@ -481,9 +500,16 @@
                                     'weight_kg' => $package->weight_kg !== null ? (float) $package->weight_kg : null,
                                     'value_fob_usd' => $package->value_fob_usd !== null ? (float) $package->value_fob_usd : null,
                                     'movements' => $package->movements->map(fn ($movement) => [
+                                        'event_code' => $movement->event_code,
+                                        'ips_operation_code' => $movement->ips_operation_code,
+                                        'ips_event_type_cd' => $movement->ips_event_type_cd,
                                         'status' => $movement->status,
                                         'location' => $movement->location,
-                                        'description' => $movement->description,
+                                        'location_code' => $movement->location_code,
+                                        'description' => $movement->displayDescription(),
+                                        'occurred_at' => optional($movement->occurred_at)->utc()->toIso8601String(),
+                                        'source' => $movement->source_type,
+                                        'actor_name' => $movement->actor?->name,
                                     ])->values(),
                                 ] : null,
                             ];
@@ -686,6 +712,9 @@
 @section('js')
     <script>
         const dashboardManifestData = @json($manifestDashboardData);
+        const bagEventRouteTemplate = @json(route('admin.bags.events', ['bag' => '__BAG_ID__']));
+        const packageEventRouteTemplate = @json(route('admin.packages.events', ['package' => '__PACKAGE_ID__']));
+        const dashboardCsrfToken = @json(csrf_token());
 
         function escapeHtml(value) {
             if (value === null || value === undefined || value === '') {
@@ -700,8 +729,19 @@
                 .replace(/'/g, '&#039;');
         }
 
+        function trackingStatusLabel(status) {
+            return ({
+                pendiente_recepcion: 'Pendiente de recepción física',
+                recibido: 'Recibido físicamente',
+                abierto: 'Abierto',
+                pendiente: 'Pendiente de entrega',
+                en_proceso: 'En proceso de entrega',
+                completado: 'Entrega completada',
+            })[status] || status;
+        }
+
         function dashboardBadge(status) {
-            return `<span class="detail-chip">${escapeHtml(status)}</span>`;
+            return `<span class="detail-chip">${escapeHtml(trackingStatusLabel(status))}</span>`;
         }
 
         function findDashboardManifest(manifestId) {
@@ -743,7 +783,7 @@
                         <td><strong>${escapeHtml(bag.dispatch_number_bag || bag.bag_number)}</strong><br><small class="text-muted">${escapeHtml(bag.bag_number)}</small></td>
                         <td>${escapeHtml(bag.loaded_package_count)} cargados / ${escapeHtml(bag.declared_package_count)} declarados</td>
                         <td>${escapeHtml(bag.loaded_weight_kg)} kg / ${escapeHtml(bag.declared_weight_kg)} kg</td>
-                        <td>${dashboardBadge(bag.status)}</td>
+                        <td>${dashboardBadge(bag.status)}<br><small class="text-muted">Saca: ${escapeHtml(trackingStatusLabel(bag.operational_status))} | Entrega: ${escapeHtml(trackingStatusLabel(bag.delivery_status))}</small></td>
                         <td>
                             <button type="button" class="interactive-trigger" onclick="openDashboardBagModal(${manifest.id}, ${bag.id})">
                                 <i class="fas fa-boxes"></i> Ver paquetes
@@ -752,6 +792,181 @@
                     </tr>
                 `).join('')
                 : '<tr><td colspan="5" class="text-muted">No hay sacas para este CN31.</td></tr>';
+        }
+
+        function localDateTimeInput() {
+            const now = new Date();
+            return new Date(now.getTime() - now.getTimezoneOffset() * 60000).toISOString().slice(0, 16);
+        }
+
+        function renderBagEventPanel(bag) {
+            const movements = (bag.movements || []).length
+                ? bag.movements.map((movement) => `
+                    <tr>
+                        <td><strong>${escapeHtml(movement.ips_operation_code)}</strong> <small>(${escapeHtml(movement.ips_event_type_cd)})</small></td>
+                        <td>${escapeHtml(movement.occurred_at)}</td>
+                        <td>${escapeHtml(movement.location_code)} - ${escapeHtml(movement.location)}</td>
+                        <td>${escapeHtml(movement.actor_name || movement.source)}</td>
+                    </tr>
+                `).join('')
+                : '<tr><td colspan="4" class="text-muted">La saca todavía no tiene eventos físicos registrados.</td></tr>';
+            const options = (bag.allowed_ips_operations || []).map((operation) =>
+                `<option value="${escapeHtml(operation.operation_code)}" data-physical="${operation.requires_physical_confirmation ? '1' : '0'}">${escapeHtml(operation.name)} (IPS ${escapeHtml(operation.event_type_cd)})</option>`
+            ).join('');
+            const route = bagEventRouteTemplate.replace('__BAG_ID__', bag.id);
+
+            return `
+                <section class="modal-panel">
+                    <h6>Flujo físico de la saca</h6>
+                    <p class="text-muted mb-2">Conciliación CN33: <strong>${escapeHtml(bag.status)}</strong> · Estado operativo: <strong>${escapeHtml(trackingStatusLabel(bag.operational_status))}</strong> · Entrega del contenido: <strong>${escapeHtml(trackingStatusLabel(bag.delivery_status))}</strong></p>
+                    <div class="table-responsive mb-3"><table class="table corp-table modal-table"><thead><tr><th>Operación IPS</th><th>Fecha</th><th>Oficina</th><th>Registrado por</th></tr></thead><tbody>${movements}</tbody></table></div>
+                    ${options ? `
+                        <form data-tracking-event-form data-event-kind="bag" data-action="${route}" onsubmit="submitTrackingEvent(event, this)">
+                            <div class="form-row">
+                                <div class="form-group col-md-6"><label>Evento</label><select class="form-control" name="ips_operation_code" required>${options}</select></div>
+                                <div class="form-group col-md-6"><label>Fecha y hora física</label><input class="form-control" type="datetime-local" name="occurred_at" value="${localDateTimeInput()}" required></div>
+                                <div class="form-group col-md-4"><label>Código de oficina</label><input class="form-control" name="location_code" maxlength="80" placeholder="Ej. BOLPBA" required></div>
+                                <div class="form-group col-md-8"><label>Nombre de oficina</label><input class="form-control" name="location" maxlength="255" placeholder="Oficina de intercambio"></div>
+                                <div class="form-group col-12" data-physical-confirmation><label><input type="checkbox" name="physical_confirmation" value="1"> Confirmo recepción física de la saca</label></div>
+                                <div class="form-group col-12"><label>Observación</label><textarea class="form-control" name="description" maxlength="2000" rows="2"></textarea></div>
+                            </div>
+                            <div class="text-danger small" data-event-error></div>
+                            <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Registrar evento local</button>
+                        </form>
+                    ` : '<div class="text-muted">No hay otra operación IPS habilitada para esta saca.</div>'}
+                </section>
+            `;
+        }
+
+        function renderPackageEventPanel(detail) {
+            const operations = detail.allowed_ips_operations || [];
+            if (!operations.length) {
+                return '<section class="modal-panel"><h6>Eventos operativos del paquete</h6><div class="text-muted">El estado actual no tiene una operación IPS siguiente habilitada.</div></section>';
+            }
+
+            const options = operations.map((operation) =>
+                `<option value="${escapeHtml(operation.operation_code)}" data-physical="${operation.requires_physical_confirmation ? '1' : '0'}" data-required-fields="${escapeHtml(JSON.stringify(operation.required_fields || []))}">${escapeHtml(operation.operation_code)} · ${escapeHtml(operation.name)} (IPS ${escapeHtml(operation.event_type_cd)})</option>`
+            ).join('');
+            const route = packageEventRouteTemplate.replace('__PACKAGE_ID__', detail.id);
+
+            return `
+                <section class="modal-panel">
+                    <h6>Registrar siguiente evento IPS del paquete</h6>
+                    <p class="text-muted">Se guarda localmente con el código IPS y su equivalente numérico. No se envía a IPS. La recepción de una saca no registra recepción automática en sus paquetes.</p>
+                    <form data-tracking-event-form data-event-kind="package" data-current-status="${escapeHtml(detail.status)}" data-action="${route}" onsubmit="submitTrackingEvent(event, this)">
+                        <div class="form-row">
+                            <div class="form-group col-md-6"><label>Evento</label><select class="form-control" name="ips_operation_code" required>${options}</select></div>
+                            <div class="form-group col-md-6"><label>Fecha y hora física</label><input class="form-control" type="datetime-local" name="occurred_at" value="${localDateTimeInput()}" required></div>
+                            <div class="form-group col-md-4"><label>Código de oficina</label><input class="form-control" name="location_code" maxlength="80" placeholder="Ej. BOLPBA" required></div>
+                            <div class="form-group col-md-8"><label>Nombre de oficina</label><input class="form-control" name="location" maxlength="255" required></div>
+                            <div class="form-group col-12" data-physical-confirmation><label><input type="checkbox" name="physical_confirmation" value="1"> Confirmo recepción física del paquete</label></div>
+                            <div class="form-group col-md-6" data-ips-field="receptacle_reference"><label>Referencia de saca recibida</label><input class="form-control" name="receptacle_reference" maxlength="100"></div>
+                            <div class="form-group col-md-6" data-ips-field="condition_code"><label>Código de condición</label><input class="form-control" type="number" min="1" max="32767" name="condition_code"></div>
+                            <div class="form-group col-md-6" data-ips-field="customs_office_code"><label>Código de Aduana</label><input class="form-control" type="number" min="1" max="32767" name="customs_office_code"></div>
+                            <div class="form-group col-md-6" data-ips-field="customs_office_type_code"><label>Tipo de oficina aduanera</label><input class="form-control" name="customs_office_type_code" maxlength="3"></div>
+                            <div class="form-group col-md-6" data-ips-field="customs_release_status_code"><label>Resultado aduanero</label><input class="form-control" name="customs_release_status_code" maxlength="3"></div>
+                            <div class="form-group col-md-6" data-ips-field="next_office_code"><label>Código de oficina siguiente</label><input class="form-control" name="next_office_code" maxlength="80"></div>
+                            <div class="form-group col-md-6" data-ips-field="domestic_receptacle_reference"><label>Referencia de saca nacional</label><input class="form-control" name="domestic_receptacle_reference" maxlength="120"></div>
+                            <div class="form-group col-md-6" data-ips-field="delivery_agent_code"><label>Código de agente de reparto</label><input class="form-control" name="delivery_agent_code" maxlength="2"></div>
+                            <div class="form-group col-md-6" data-ips-field="reason_code"><label>Código de no entrega</label><input class="form-control" name="reason_code" maxlength="80"></div>
+                            <div class="form-group col-md-6" data-ips-field="non_delivery_measure"><label>Medida tomada</label><input class="form-control" name="non_delivery_measure" maxlength="1"></div>
+                            <div class="form-group col-md-6" data-ips-field="delivery_mode"><label>Modalidad de entrega</label><select class="form-control" name="delivery_mode"><option value="">Seleccionar</option><option value="DOMICILIARIA">Domiciliaria</option><option value="NO_DOMICILIARIA">No domiciliaria</option></select></div>
+                            <div class="form-group col-md-6" data-ips-field="signatory"><label>Receptor / firmante</label><input class="form-control" name="signatory" maxlength="64"></div>
+                            <div class="form-group col-12" data-ips-field="physical_return_confirmed"><label><input type="checkbox" name="physical_return_confirmed" value="1"> Confirmo que el paquete regresó físicamente a oficina</label></div>
+                            <div class="form-group col-12"><label>Observación</label><textarea class="form-control" name="description" maxlength="2000" rows="2"></textarea></div>
+                            <div class="form-group col-12"><label><input type="checkbox" name="notify_webhook" value="1"> Notificar este evento a integraciones suscritas</label></div>
+                        </div>
+                        <div class="text-danger small" data-event-error></div>
+                        <button class="btn btn-primary" type="submit"><i class="fas fa-save"></i> Registrar evento local</button>
+                    </form>
+                </section>
+            `;
+        }
+
+        function configureTrackingEventForm(form) {
+            const operation = form.querySelector('[name="ips_operation_code"]')?.selectedOptions?.[0];
+            if (!operation) return;
+
+            const isPackage = form.dataset.eventKind === 'package';
+            const requiredFields = isPackage ? JSON.parse(operation.dataset.requiredFields || '[]') : [];
+            const visibleFields = isPackage ? {
+                EMR: ['receptacle_reference', 'condition_code'],
+                CUSTOMS_PRESENT: ['customs_office_code', 'customs_office_type_code'],
+                CUSTOMS_INFO: ['customs_release_status_code'],
+                EDN: ['next_office_code'],
+                EIB: ['domestic_receptacle_reference'],
+                HANDOVER_AGENT: ['delivery_agent_code'],
+                EMH: ['reason_code', 'non_delivery_measure'],
+                EMI: ['delivery_mode', 'signatory'],
+            }[operation.value] || [] : [];
+
+            form.querySelectorAll('[data-ips-field]').forEach((group) => {
+                const field = group.dataset.ipsField;
+                const visible = visibleFields.includes(field)
+                    || (field === 'physical_return_confirmed' && operation.value === 'HANDOVER_AGENT' && form.dataset.currentStatus === 'intentos_carteros');
+                group.hidden = !visible;
+                const input = group.querySelector('[name]');
+                if (input) input.required = requiredFields.includes(field);
+            });
+
+            const physicalGroup = form.querySelector('[data-physical-confirmation]');
+            if (physicalGroup) {
+                const required = operation.dataset.physical === '1';
+                physicalGroup.hidden = !required;
+                const checkbox = physicalGroup.querySelector('[name="physical_confirmation"]');
+                if (checkbox) checkbox.required = required;
+            }
+
+            const returnConfirmation = form.querySelector('[name="physical_return_confirmed"]');
+            if (returnConfirmation) {
+                returnConfirmation.required = requiredFields.includes('physical_return_confirmed');
+            }
+        }
+
+        async function submitTrackingEvent(event, form) {
+            event.preventDefault();
+            configureTrackingEventForm(form);
+            if (!form.reportValidity()) return;
+
+            const payload = {};
+            new FormData(form).forEach((value, key) => {
+                if (value !== '') payload[key] = value;
+            });
+            form.querySelectorAll('input[type="checkbox"]').forEach((checkbox) => {
+                if (checkbox.name) payload[checkbox.name] = checkbox.checked;
+            });
+
+            const idempotencyKey = (window.crypto?.randomUUID?.() || `local-${Date.now()}-${Math.random().toString(16).slice(2)}`);
+            const button = form.querySelector('[type="submit"]');
+            const errorHost = form.querySelector('[data-event-error]');
+            button.disabled = true;
+            errorHost.textContent = '';
+
+            try {
+                const response = await fetch(form.dataset.action, {
+                    method: 'POST',
+                    headers: {
+                        'Accept': 'application/json',
+                        'Content-Type': 'application/json',
+                        'X-CSRF-TOKEN': dashboardCsrfToken,
+                        'Idempotency-Key': idempotencyKey,
+                    },
+                    body: JSON.stringify(payload),
+                });
+                const result = await response.json();
+
+                if (!response.ok) {
+                    const messages = Object.values(result.errors || {}).flat();
+                    errorHost.textContent = messages.join(' ') || result.message || 'No se pudo registrar el evento.';
+                    button.disabled = false;
+                    return;
+                }
+
+                window.location.reload();
+            } catch (error) {
+                errorHost.textContent = 'No se pudo comunicar con el servidor. Intenta nuevamente.';
+                button.disabled = false;
+            }
         }
 
         function openDashboardBagModal(manifestId, bagId) {
@@ -769,9 +984,12 @@
                         <div class="item"><span class="label">CN31</span><span class="value">${escapeHtml(manifest.cn31_number)}</span></div>
                         <div class="item"><span class="label">Despacho saca</span><span class="value">${escapeHtml(bag.dispatch_number_bag || bag.bag_number)}</span></div>
                         <div class="item"><span class="label">Empresa</span><span class="value">${escapeHtml(manifest.company_name)}</span></div>
-                        <div class="item"><span class="label">Estado saca</span><span class="value">${escapeHtml(bag.status)}</span></div>
+                        <div class="item"><span class="label">Conciliación CN33</span><span class="value">${escapeHtml(bag.status)}</span></div>
+                        <div class="item"><span class="label">Estado operativo</span><span class="value">${escapeHtml(trackingStatusLabel(bag.operational_status))}</span></div>
+                        <div class="item"><span class="label">Avance de entrega</span><span class="value">${escapeHtml(trackingStatusLabel(bag.delivery_status))}</span></div>
                     </div>
                 </div>
+                ${renderBagEventPanel(bag)}
                 <div class="table-responsive">
                     <table class="table corp-table modal-table">
                         <thead>
@@ -804,6 +1022,12 @@
                 </div>
             `;
 
+            const bagForm = document.querySelector('#bagExplorerBody [data-tracking-event-form]');
+            if (bagForm) {
+                configureTrackingEventForm(bagForm);
+                bagForm.querySelector('[name="ips_operation_code"]')?.addEventListener('change', () => configureTrackingEventForm(bagForm));
+            }
+
             $('#bagExplorerModal').modal('show');
         }
 
@@ -818,12 +1042,14 @@
             const movements = detail.movements.length
                 ? detail.movements.map((movement) => `
                     <tr>
+                        <td>${escapeHtml(movement.ips_operation_code || movement.event_code)}${movement.ips_event_type_cd ? ` <small>(IPS ${escapeHtml(movement.ips_event_type_cd)})</small>` : ''}</td>
                         <td>${escapeHtml(movement.status)}</td>
+                        <td>${escapeHtml(movement.occurred_at)}</td>
                         <td>${escapeHtml(movement.location)}</td>
-                        <td>${escapeHtml(movement.description)}</td>
+                        <td>${escapeHtml(movement.description)}<br><small class="text-muted">${escapeHtml(movement.actor_name || movement.source)}</small></td>
                     </tr>
                 `).join('')
-                : '<tr><td colspan="3" class="text-muted">No hay movimientos registrados para este paquete.</td></tr>';
+                : '<tr><td colspan="5" class="text-muted">No hay movimientos registrados para este paquete.</td></tr>';
 
             document.getElementById('packageExplorerTitle').textContent = `Detalle de ${detail.tracking_code}`;
             document.getElementById('packageExplorerBody').innerHTML = `
@@ -903,12 +1129,15 @@
                         </div>
                     </div>
                 </div>
+                ${renderPackageEventPanel(detail)}
                 <h6 class="mb-3">Historial de movimientos</h6>
                 <div class="table-responsive">
                     <table class="table corp-table modal-table">
                         <thead>
                             <tr>
+                                <th>Operación</th>
                                 <th>Estado</th>
+                                <th>Fecha y hora</th>
                                 <th>Ubicacion</th>
                                 <th>Descripcion</th>
                             </tr>
@@ -917,6 +1146,12 @@
                     </table>
                 </div>
             `;
+
+            const packageForm = document.querySelector('#packageExplorerBody [data-tracking-event-form]');
+            if (packageForm) {
+                configureTrackingEventForm(packageForm);
+                packageForm.querySelector('[name="ips_operation_code"]')?.addEventListener('change', () => configureTrackingEventForm(packageForm));
+            }
 
             $('#packageExplorerModal').modal('show');
         }

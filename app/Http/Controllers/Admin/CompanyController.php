@@ -10,6 +10,7 @@ use App\Models\Company;
 use App\Models\Package;
 use App\Models\PackageMovement;
 use App\Models\User;
+use App\Support\IpsEventCatalog;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -74,8 +75,8 @@ class CompanyController extends Controller
             'delivered_packages' => Package::where('company_id', $company->id)->where('status', 'entregado')->count(),
             'packages_with_delivery_attempts' => Package::where('company_id', $company->id)->where('delivery_attempts', '>', 0)->count(),
             'total_delivery_attempts' => (int) Package::where('company_id', $company->id)->sum('delivery_attempts'),
-            'delivered_bags' => Cn31Bag::where('company_id', $company->id)->where('status', 'entregado')->count(),
-            'delivered_manifests' => Cn31Manifest::where('company_id', $company->id)->where('status', 'entregado')->count(),
+            'delivered_bags' => Cn31Bag::where('company_id', $company->id)->where('delivery_status', 'completado')->count(),
+            'delivered_manifests' => Cn31Manifest::where('company_id', $company->id)->where('delivery_status', 'completado')->count(),
         ];
 
         $summary['pending_delivery_packages'] = max($summary['packages'] - $summary['delivered_packages'], 0);
@@ -86,8 +87,9 @@ class CompanyController extends Controller
         $recentManifests = Cn31Manifest::query()
             ->with([
                 'bags' => fn ($query) => $query->latest(),
+                'bags.movements.actor',
                 'bags.cn33Packages' => fn ($query) => $query->latest(),
-                'bags.cn33Packages.package.movements' => fn ($query) => $query->latest('occurred_at'),
+                'bags.cn33Packages.package.movements' => fn ($query) => $query->with('actor')->latest('occurred_at'),
             ])
             ->where('company_id', $company->id)
             ->latest('dispatch_date')
@@ -98,6 +100,7 @@ class CompanyController extends Controller
             ->with([
                 'manifest:id,cn31_number',
                 'cn33Packages:id,cn31_bag_id,status',
+                'movements.actor',
             ])
             ->where('company_id', $company->id)
             ->latest()
@@ -118,7 +121,7 @@ class CompanyController extends Controller
             ->get();
 
         $recentMovements = PackageMovement::query()
-            ->with('package:id,tracking_code')
+            ->with(['package:id,tracking_code', 'actor'])
             ->where('company_id', $company->id)
             ->latest('occurred_at')
             ->limit(12)

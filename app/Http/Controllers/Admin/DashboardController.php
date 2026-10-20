@@ -23,9 +23,10 @@ class DashboardController extends Controller
                 'company',
                 'bags' => fn ($query) => $query
                     ->with([
+                        'movements.actor',
                         'cn33Packages' => fn ($cn33Query) => $cn33Query
                             ->with([
-                                'package' => fn ($packageQuery) => $packageQuery->with('movements'),
+                                'package' => fn ($packageQuery) => $packageQuery->with('movements.actor'),
                             ]),
                     ])
                     ->latest(),

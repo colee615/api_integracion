@@ -10,19 +10,19 @@
     },
     {
       "key": "api_token",
-      "value": "jcK0V3WVYClt4Lzixh5bf1pYa8d8ekPDEv6vQY9A7y2PIZwANobPO7Gya5GwvDYo",
+      "value": "",
       "type": "secret",
       "enabled": true
     },
     {
       "key": "portal_email",
-      "value": "pruebalions@gmail.com",
+      "value": "",
       "type": "default",
       "enabled": true
     },
     {
       "key": "portal_password",
-      "value": "123456789",
+      "value": "",
       "type": "secret",
       "enabled": true
     },

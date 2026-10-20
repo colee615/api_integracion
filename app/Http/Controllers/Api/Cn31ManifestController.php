@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\Concerns\FormatsIntegrationResponses;
 use App\Http\Controllers\Controller;
 use App\Models\Cn31Manifest;
 use App\Support\ApiTokenContext;
+use App\Support\DeliverySummary;
 use App\Support\PackageStatusCatalog;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -22,12 +23,67 @@ class Cn31ManifestController extends Controller
         $company = $request->attributes->get('currentCompany');
         $apiToken = ApiTokenContext::currentToken($request);
 
+        $validator = Validator::make($request->query(), [
+            'dispatch_number_manifest' => ['sometimes', 'nullable', 'string', 'max:10', 'regex:/^[0-9]{10}$/'],
+            'dispatch_date_from' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
+            'dispatch_date_to' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
+            'received_at_from' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
+            'received_at_to' => ['sometimes', 'nullable', 'date_format:Y-m-d'],
+            'per_page' => ['sometimes', 'nullable', 'integer', 'min:1', 'max:100'],
+            'page' => ['sometimes', 'nullable', 'integer', 'min:1'],
+        ]);
+
+        $validator->after(function ($validator) use ($request): void {
+            foreach ([['dispatch_date_from', 'dispatch_date_to'], ['received_at_from', 'received_at_to']] as [$from, $to]) {
+                $fromDate = $request->query($from);
+                $toDate = $request->query($to);
+
+                if (is_string($fromDate) && is_string($toDate) && $fromDate > $toDate) {
+                    $validator->errors()->add($to, __('api.validation.date_range_invalid'));
+                }
+            }
+        });
+
+        if ($validator->fails()) {
+            return $this->validationErrorResponse(
+                $validator,
+                'CN31_FILTER_VALIDATION_ERROR',
+                __('api.validation_messages.cn31_filters_invalid')
+            );
+        }
+
+        $filters = $validator->validated();
+
         $manifests = ApiTokenContext::scopeToToken(
             Cn31Manifest::query()->withCount('bags')->where('company_id', $company->id),
             $apiToken
         )
-            ->latest('dispatch_date')
-            ->paginate(20);
+            ->when($filters['dispatch_number_manifest'] ?? null, fn ($query, $number) => $query->where('dispatch_number_manifest', $number))
+            ->when($filters['dispatch_date_from'] ?? null, fn ($query, $date) => $query->whereDate('dispatch_date', '>=', $date))
+            ->when($filters['dispatch_date_to'] ?? null, fn ($query, $date) => $query->whereDate('dispatch_date', '<=', $date))
+            ->when($filters['received_at_from'] ?? null, fn ($query, $date) => $query->whereDate('received_at', '>=', $date))
+            ->when($filters['received_at_to'] ?? null, fn ($query, $date) => $query->whereDate('received_at', '<=', $date))
+            ->orderByDesc('dispatch_date')
+            ->orderByDesc('id')
+            ->paginate($filters['per_page'] ?? 20)
+            ->withQueryString();
+
+        $manifests->getCollection()->transform(fn (Cn31Manifest $manifest): array => [
+            'cn31_number' => $manifest->cn31_number,
+            'dispatch_number_manifest' => $manifest->dispatch_number_manifest,
+            'origin_office' => $manifest->origin_office,
+            'destination_office' => $manifest->destination_office,
+            'dispatch_date' => $manifest->dispatch_date?->utc()->toIso8601String(),
+            'received_at' => $manifest->received_at?->utc()->toIso8601String(),
+            'status' => $manifest->status,
+            'status_label' => PackageStatusCatalog::labelForStatus($manifest->status),
+            'delivery_status' => $manifest->delivery_status,
+            'delivery_status_label' => __('api.statuses.'.$manifest->delivery_status),
+            'total_bags' => (int) $manifest->total_bags,
+            'total_packages' => (int) $manifest->total_packages,
+            'total_weight_kg' => (float) $manifest->total_weight_kg,
+            'bags_count' => (int) $manifest->bags_count,
+        ]);
 
         return response()->json($manifests);
     }
@@ -159,6 +215,8 @@ class Cn31ManifestController extends Controller
                 'dispatch_number_manifest' => $manifest->dispatch_number_manifest,
                 'status' => $manifest->status,
                 'status_label' => PackageStatusCatalog::labelForStatus($manifest->status),
+                'delivery_status' => $manifest->delivery_status,
+                'delivery_status_label' => __('api.statuses.'.$manifest->delivery_status),
                 'total_bags' => $manifest->total_bags,
                 'total_packages' => $manifest->total_packages,
                 'total_weight_kg' => (float) $manifest->total_weight_kg,
@@ -170,6 +228,10 @@ class Cn31ManifestController extends Controller
                     'declared_weight_kg' => (float) $bag->declared_weight_kg,
                     'status' => $bag->status,
                     'status_label' => PackageStatusCatalog::labelForStatus($bag->status),
+                    'operational_status' => $bag->operational_status,
+                    'operational_status_label' => __('api.statuses.'.$bag->operational_status),
+                    'delivery_status' => $bag->delivery_status,
+                    'delivery_status_label' => __('api.statuses.'.$bag->delivery_status),
                 ])->values(),
             ],
         ], 201);
@@ -181,7 +243,7 @@ class Cn31ManifestController extends Controller
         $apiToken = ApiTokenContext::currentToken($request);
 
         $manifest = ApiTokenContext::scopeToToken(
-            Cn31Manifest::query()->with(['bags.cn33Packages'])->where('company_id', $company->id),
+            Cn31Manifest::query()->with(['bags.cn33Packages', 'bags.movements'])->where('company_id', $company->id),
             $apiToken
         )
             ->where('cn31_number', $cn31Number)
@@ -194,6 +256,8 @@ class Cn31ManifestController extends Controller
             );
         }
 
+        $bags = $manifest->bags;
+
         return response()->json([
             'success' => true,
             'data' => [
@@ -205,10 +269,13 @@ class Cn31ManifestController extends Controller
                 'dispatch_date' => $manifest->dispatch_date?->toIso8601String(),
                 'status' => $manifest->status,
                 'status_label' => PackageStatusCatalog::labelForStatus($manifest->status),
+                'delivery_status' => $manifest->delivery_status,
+                'delivery_status_label' => __('api.statuses.'.$manifest->delivery_status),
                 'total_bags' => $manifest->total_bags,
                 'total_packages' => $manifest->total_packages,
                 'total_weight_kg' => (float) $manifest->total_weight_kg,
-                'bags' => $manifest->bags->map(fn ($bag) => [
+                'delivery_summary' => DeliverySummary::forDispatch($bags),
+                'bags' => $bags->map(fn ($bag) => [
                     'id' => $bag->id,
                     'bag_number' => $bag->bag_number,
                     'dispatch_number_bag' => $bag->dispatch_number_bag,
@@ -219,6 +286,22 @@ class Cn31ManifestController extends Controller
                     'documented_packages' => $bag->cn33Packages->where('status', 'documentado_cn22')->count(),
                     'status' => $bag->status,
                     'status_label' => PackageStatusCatalog::labelForStatus($bag->status),
+                    'operational_status' => $bag->operational_status,
+                    'operational_status_label' => __('api.statuses.'.$bag->operational_status),
+                    'delivery_status' => $bag->delivery_status,
+                    'delivery_status_label' => __('api.statuses.'.$bag->delivery_status),
+                    'delivery_summary' => DeliverySummary::forPackageRows($bag->cn33Packages),
+                    'events' => $bag->movements->reverse()->values()->map(fn ($event) => [
+                        'event_id' => $event->event_id,
+                        'event_code' => $event->event_code,
+                        'ips_operation_code' => $event->ips_operation_code,
+                        'ips_event_type_cd' => $event->ips_event_type_cd,
+                        'status' => $event->status,
+                        'location_code' => $event->location_code,
+                        'location' => $event->location,
+                        'occurred_at' => $event->occurred_at?->utc()->toIso8601String(),
+                        'recorded_at' => $event->recorded_at?->utc()->toIso8601String(),
+                    ])->values(),
                 ])->values(),
             ],
         ]);

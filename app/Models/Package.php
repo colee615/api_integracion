@@ -96,4 +96,9 @@ class Package extends Model
     {
         return $this->meta['last_delivery_attempt']['location'] ?? null;
     }
+
+    public function latestDeliveryAttemptReasonCode(): ?string
+    {
+        return $this->meta['last_delivery_attempt']['reason_code'] ?? null;
+    }
 }

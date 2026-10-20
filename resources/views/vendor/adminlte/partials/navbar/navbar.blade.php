@@ -16,6 +16,12 @@
         @yield('content_top_nav_left')
     </ul>
 
+    <div class="admin-header-context d-none d-md-flex" aria-label="Ubicación actual">
+        <span class="context-brand">Correos de Bolivia</span>
+        <span class="context-divider">/</span>
+        <span class="context-page">Plataforma de integración postal</span>
+    </div>
+
     {{-- Navbar right links --}}
     <ul class="navbar-nav ml-auto">
         {{-- Custom right links --}}

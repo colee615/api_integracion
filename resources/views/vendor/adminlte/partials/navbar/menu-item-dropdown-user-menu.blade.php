@@ -21,6 +21,10 @@
             <img src="{{ Auth::user()->adminlte_image() }}"
                  class="user-image img-circle elevation-2"
                  alt="{{ Auth::user()->name }}">
+        @else
+            <span class="user-menu-brandmark" aria-hidden="true">
+                <img src="{{ asset(config('adminlte.logo_img')) }}" alt="">
+            </span>
         @endif
         <span @if(config('adminlte.usermenu_image')) class="d-none d-md-inline" @endif>
             {{ Auth::user()->name }}

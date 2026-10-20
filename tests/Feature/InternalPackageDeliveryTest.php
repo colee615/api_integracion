@@ -5,6 +5,7 @@ namespace Tests\Feature;
 use App\Models\Cn31Bag;
 use App\Models\Cn31Manifest;
 use App\Models\Cn33Package;
+use App\Models\ApiToken;
 use App\Models\Company;
 use App\Models\Package;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -13,6 +14,13 @@ use Tests\TestCase;
 class InternalPackageDeliveryTest extends TestCase
 {
     use RefreshDatabase;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        config(['services.internal_api.token' => 'test-internal-api-token']);
+    }
 
     public function test_internal_delivery_api_marks_package_bag_and_manifest_as_delivered_when_all_bag_packages_are_delivered(): void
     {
@@ -85,12 +93,21 @@ class InternalPackageDeliveryTest extends TestCase
             'destination' => 'LA PAZ',
             'weight_kg' => 0.250,
             'status' => 'entregado',
+            'delivery_status' => 'completado',
             'meta' => [
                 'delivered_at' => now()->subHour()->toIso8601String(),
             ],
         ]);
 
-        $deliveredAt = '2026-04-08T20:15:00-04:00';
+        [, $companyReadToken] = ApiToken::issue(
+            $company,
+            'Consulta documental',
+            now()->subMinute(),
+            now()->addDays(10),
+            ['documents:read']
+        );
+
+        $deliveredAt = now()->subMinutes(30)->toIso8601String();
 
         $this->postJson('/api/v1/internal/packages/deliver', [
             'tracking_code' => 'EN000000901BO',
@@ -98,12 +115,31 @@ class InternalPackageDeliveryTest extends TestCase
             'location' => 'LA PAZ',
             'description' => 'Entrega final confirmada por operaciones.',
         ], [
+            ...$this->internalHeaders(),
             'Accept' => 'application/json',
         ])->assertOk()
             ->assertJsonPath('data.tracking_code', 'EN000000901BO')
             ->assertJsonPath('data.status', 'entregado')
-            ->assertJsonPath('data.bag.status', 'entregado')
-            ->assertJsonPath('data.manifest.status', 'entregado');
+            ->assertJsonPath('data.bag.status', 'conciliado')
+            ->assertJsonPath('data.bag.delivery_status', 'completado')
+            ->assertJsonPath('data.manifest.status', 'conciliado')
+            ->assertJsonPath('data.manifest.delivery_status', 'completado');
+
+        $this->getJson('/api/v1/cn31/manifests/CN31-DELIVERED-001', [
+            'Authorization' => 'Bearer '.$companyReadToken,
+            'Accept' => 'application/json',
+        ])->assertOk()
+            ->assertJsonPath('data.delivery_summary.delivered_packages', 2)
+            ->assertJsonPath('data.delivery_summary.registered_bags', 1)
+            ->assertJsonPath('data.delivery_summary.completed_bags', 1);
+
+        $this->getJson('/api/v1/cn33/bags/SACA-DELIVERED-001', [
+            'Authorization' => 'Bearer '.$companyReadToken,
+            'Accept' => 'application/json',
+        ])->assertOk()
+            ->assertJsonPath('data.delivery_summary.registered_packages', 2)
+            ->assertJsonPath('data.delivery_summary.delivered_packages', 2)
+            ->assertJsonPath('data.delivery_status', 'completado');
 
         $this->assertDatabaseHas('packages', [
             'company_id' => $company->id,
@@ -121,7 +157,8 @@ class InternalPackageDeliveryTest extends TestCase
         $this->assertDatabaseHas('cn33_packages', [
             'company_id' => $company->id,
             'tracking_code' => 'EN000000901BO',
-            'status' => 'entregado',
+            'status' => 'documentado_cn22',
+            'delivery_status' => 'completado',
         ]);
 
         $this->assertSame(
@@ -138,6 +175,7 @@ class InternalPackageDeliveryTest extends TestCase
     public function test_internal_delivery_api_requires_tracking_code_in_request_body(): void
     {
         $this->postJson('/api/v1/internal/packages/deliver', [], [
+            ...$this->internalHeaders(),
             'Accept' => 'application/json',
         ])->assertStatus(422)
             ->assertJsonValidationErrors(['tracking_code']);
@@ -148,6 +186,7 @@ class InternalPackageDeliveryTest extends TestCase
         $this->postJson('/api/v1/internal/packages/deliver', [
             'tracking_code' => 'EN000009999BO',
         ], [
+            ...$this->internalHeaders(),
             'Accept' => 'application/json',
         ])->assertStatus(404)
             ->assertJson([
@@ -204,7 +243,7 @@ class InternalPackageDeliveryTest extends TestCase
             'status' => 'documentado_cn22',
         ]);
 
-        $occurredAt = '2026-04-09T10:15:00-04:00';
+        $occurredAt = now()->subMinutes(30)->toIso8601String();
 
         $this->postJson('/api/v1/internal/packages/delivery-attempt', [
             'tracking_code' => 'EN000000903BO',
@@ -212,8 +251,9 @@ class InternalPackageDeliveryTest extends TestCase
             'location' => 'LA PAZ',
             'description' => 'No se encontro al destinatario en domicilio.',
         ], [
+            ...$this->internalHeaders(),
             'Accept' => 'application/json',
-        ])->assertOk()
+        ])->assertCreated()
             ->assertJsonPath('data.tracking_code', 'EN000000903BO')
             ->assertJsonPath('data.delivery_attempts', 1)
             ->assertJsonPath('data.status', 'intentos_carteros')
@@ -238,10 +278,10 @@ class InternalPackageDeliveryTest extends TestCase
             Package::find($package->id)?->last_delivery_attempt_at
         );
 
-        $this->assertSame(
-            1,
-            Cn33Package::where('tracking_code', 'EN000000903BO')->first()?->meta['delivery_attempts'] ?? null
-        );
+        $this->assertDatabaseHas('cn33_packages', [
+            'tracking_code' => 'EN000000903BO',
+            'delivery_status' => 'en_proceso',
+        ]);
     }
 
     public function test_internal_delivery_attempt_api_returns_friendly_message_when_package_does_not_exist(): void
@@ -250,10 +290,25 @@ class InternalPackageDeliveryTest extends TestCase
             'tracking_code' => 'EN000009998BO',
             'description' => 'Intento de prueba',
         ], [
+            ...$this->internalHeaders(),
             'Accept' => 'application/json',
         ])->assertStatus(404)
             ->assertJson([
                 'message' => __('api.not_found.package', ['tracking_code' => 'EN000009998BO']),
             ]);
+    }
+
+    public function test_internal_delivery_api_rejects_requests_without_internal_token(): void
+    {
+        $this->postJson('/api/v1/internal/packages/deliver', [
+            'tracking_code' => 'EN000009999BO',
+        ])->assertUnauthorized();
+    }
+
+    private function internalHeaders(): array
+    {
+        return [
+            'X-Internal-Token' => 'test-internal-api-token',
+        ];
     }
 }

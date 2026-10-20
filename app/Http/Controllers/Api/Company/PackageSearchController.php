@@ -102,7 +102,7 @@ class PackageSearchController extends Controller
                                         'id' => $movement->id,
                                         'status' => $movement->status,
                                         'location' => $movement->location,
-                                        'description' => $movement->description,
+                                        'description' => $movement->displayDescription(),
                                     ])->values(),
                                 ] : null,
                             ];
@@ -182,7 +182,7 @@ class PackageSearchController extends Controller
                         'status' => $movement->status,
                         'status_label' => PackageStatusCatalog::labelForStatus($movement->status),
                         'location' => $movement->location,
-                        'description' => $movement->description,
+                        'description' => $movement->displayDescription(),
                     ])->values(),
                 ],
             ]);

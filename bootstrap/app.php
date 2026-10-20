@@ -35,6 +35,7 @@ return Application::configure(basePath: dirname(__DIR__))
 
         $middleware->alias([
             'api.token' => \App\Http\Middleware\AuthenticateApiToken::class,
+            'api.ability' => \App\Http\Middleware\RequireApiAbility::class,
             'internal.api' => \App\Http\Middleware\AuthenticateInternalApi::class,
             'company.portal' => \App\Http\Middleware\AuthenticateCompanyPortal::class,
             'company.locale' => \App\Http\Middleware\SetCompanyLocale::class,

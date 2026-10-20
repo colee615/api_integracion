@@ -22,6 +22,11 @@
                 @each('adminlte::partials.sidebar.menu-item', $adminlte->menu('sidebar'), 'item')
             </ul>
         </nav>
+
+        <div class="sidebar-footer-brand">
+            <strong>API Integración</strong>
+            <span>Servicios de integración postal</span>
+        </div>
     </div>
 
 </aside>

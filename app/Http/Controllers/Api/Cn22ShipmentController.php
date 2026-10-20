@@ -259,7 +259,7 @@ class Cn22ShipmentController extends Controller
                     ],
                 ]);
 
-                $createdPackages->push($package->fresh('movements'));
+                $createdPackages->push($package->fresh());
             }
 
             $company->registerSandboxShipment($recordCount);

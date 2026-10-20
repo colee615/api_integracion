@@ -23,6 +23,7 @@ class Cn33Package extends Model
         'weight_kg',
         'item_order',
         'status',
+        'delivery_status',
         'meta',
     ];
 
