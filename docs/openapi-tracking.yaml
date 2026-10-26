@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Postal Tracking and Partner Integration API
-  version: 1.0.0
+  version: 1.1.0
   description: >-
     Company scoped parcel registration, immutable tracking events, and webhook delivery. Bearer tokens only access records in their associated company. Trial tokens are additionally restricted to records created by the same token.
 servers:
@@ -39,7 +39,110 @@ paths:
         '403':
           $ref: '#/components/responses/Forbidden'
 
+  /integration/bulk:
+    post:
+      tags: [Integration]
+      summary: Register CN31, bags, packages, and CN22 declarations in one request
+      description: Requires documents:write. This is the only endpoint that wraps the CN31 fields under manifest. Each bag must include its unique partner-assigned bag_number, package_count, total_weight_kg, and one or more packages; every package requires a CN22 declaration. CN31 offices use six-character IMPC codes. Since CN31 provides a date only, dispatch_date is sent as YYYY-MM-DD 00:00:00 (UTC).
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BulkIntegrationRequest'
+      responses:
+        '201': { description: 'CN31, bags, packages, and CN22 records registered successfully.' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /cn33/bags/{bagNumber}/packages:
+    parameters:
+      - name: bagNumber
+        in: path
+        required: true
+        description: The exact unique bag_number previously submitted inside the CN31 bags array.
+        schema: { type: string, maxLength: 100, example: PEEX260602250148 }
+    post:
+      tags: [Bags]
+      summary: Register CN33 package rows in an existing bag
+      description: Requires documents:write. The bag must first be created by POST /cn31/manifests. Reuse the exact same bag_number in this path. No dispatch_number_bag field is used.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [packages]
+              properties:
+                packages:
+                  type: array
+                  minItems: 1
+                  items: { $ref: '#/components/schemas/Cn33PackageInput' }
+      responses:
+        '201': { description: CN33 package rows registered successfully. }
+        '404': { description: Bag not found in the authenticated company and token scope. }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /cn22/shipments:
+    post:
+      tags: [Shipments]
+      summary: Register CN22 customs declarations for shipments
+      description: Requires documents:write. Sends CN22 data as JSON records; this endpoint does not upload scanned CN22/CN38 files or send email.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [records]
+              properties:
+                records:
+                  type: array
+                  minItems: 1
+                  items: { $ref: '#/components/schemas/Cn22ShipmentInput' }
+      responses:
+        '201': { description: CN22 records accepted and pre-alerts registered. }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
   /cn31/manifests:
+    post:
+      tags: [Dispatches]
+      summary: Register a CN31 dispatch and its bags
+      description: Requires documents:write. cn31_number is the complete Dispatch-ID printed below the CN31 barcode and the identifier used for manifest lookup in the authenticated scope. dispatch_number_manifest is the numeric Dispatch No. from the CN31; send it as a string containing digits only, with variable length and leading zeroes preserved. At this CN31 endpoint, each bag is linked to the manifest through the top-level bags array; the bulk endpoint nests the same list under manifest.bags. bag_number is the unique identifier assigned by the partner to each bag and must be reused unchanged in subsequent CN33 requests; the API does not derive it from CN31/CN38 or use a separate dispatch_number_bag field. The dispatch serial may repeat across series.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [cn31_number, dispatch_number_manifest, origin_office, destination_office, dispatch_date, bags]
+              properties:
+                cn31_number: { type: string, maxLength: 100, description: 'Complete Dispatch-ID printed below the CN31 barcode; used to look up the manifest in the authenticated scope.', example: CWPUNAPELIMAAUX60063 }
+                dispatch_number_manifest: { type: string, minLength: 1, maxLength: 255, pattern: '^[0-9]+$', example: '0063' }
+                origin_office: { type: string, maxLength: 150, description: 'Six-character IMPC code of the origin office (e.g. CWPUNA).' }
+                destination_office: { type: string, maxLength: 150, description: 'Six-character IMPC code of the destination office (e.g. PELIMA).' }
+                dispatch_date: { type: string, description: 'CN31 dispatch date. CN31 supplies a date only; send YYYY-MM-DD 00:00:00 (UTC). Do not use the CN38 flight departure time.', example: '2026-10-20 00:00:00' }
+                bags:
+                  type: array
+                  minItems: 1
+                  items:
+                    type: object
+                    required: [bag_number, package_count, total_weight_kg]
+                    properties:
+                      bag_number: { type: string, maxLength: 100, description: 'Unique bag identifier assigned by the partner. Reuse unchanged in CN33 requests; the dispatch relationship comes from the nested bags array.' }
+                      package_count: { type: integer, minimum: 1 }
+                      total_weight_kg: { type: number, exclusiveMinimum: 0 }
+                      dispatch_note: { type: [string, 'null'], maxLength: 255 }
+      responses:
+        '201': { description: CN31 dispatch and bags registered successfully. }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
     get:
       tags: [Dispatches]
       summary: List CN31 dispatches in the authenticated company scope
@@ -47,8 +150,8 @@ paths:
       parameters:
         - name: dispatch_number_manifest
           in: query
-          description: Exact dispatch number match.
-          schema: { type: string, pattern: '^[0-9]{10}$' }
+          description: Exact match on the CN31 Dispatch No. Send digits only as a string; length varies and leading zeroes are significant.
+          schema: { type: string, minLength: 1, maxLength: 255, pattern: '^[0-9]+$', example: '0063' }
         - name: dispatch_date_from
           in: query
           description: Inclusive lower bound for the sender-declared dispatch date.
@@ -106,7 +209,7 @@ paths:
                   to: { type: [integer, 'null'] }
                   total: { type: integer, minimum: 0 }
                 additionalProperties: true
-        '422': { description: Invalid filter, date range, page, or page size. }
+        '422': { description: 'Invalid filter, date range, page, or page size.' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
 
@@ -151,7 +254,7 @@ paths:
       - name: bagReference
         in: path
         required: true
-        description: CN31 bag number or bag dispatch number.
+        description: CN31 bag number.
         schema: { type: string, maxLength: 100 }
     get:
       tags: [Bags]
@@ -367,7 +470,7 @@ paths:
         in: path
         required: true
         schema: { type: string, maxLength: 100 }
-        description: CN31 bag number or bag dispatch number.
+        description: CN31 bag number.
     get:
       tags: [Tracking]
       summary: Read the separate physical history of a CN31 bag
@@ -626,12 +729,109 @@ components:
       required: false
       schema: { type: string, minLength: 1, maxLength: 120, pattern: '^[A-Za-z0-9._:-]+$' }
   schemas:
+    Cn31BagInput:
+      type: object
+      required: [bag_number, package_count, total_weight_kg]
+      properties:
+        bag_number: { type: string, maxLength: 100, description: 'Unique identifier assigned by 360Lions; reuse unchanged in CN33.', example: PEEX260602250148 }
+        package_count: { type: integer, minimum: 1 }
+        total_weight_kg: { type: number, exclusiveMinimum: 0 }
+        dispatch_note: { type: [string, 'null'], maxLength: 255 }
+    Cn33PackageInput:
+      type: object
+      required: [tracking_code, origin, destination, weight_kg]
+      properties:
+        tracking_code: { type: string, maxLength: 100 }
+        origin: { type: string, maxLength: 255 }
+        destination: { type: string, maxLength: 255 }
+        weight_kg: { type: number, exclusiveMinimum: 0 }
+        notes: { type: [string, 'null'], maxLength: 255 }
+    Cn22CustomsItemInput:
+      type: object
+      required: [description]
+      properties:
+        description: { type: string, maxLength: 255 }
+        quantity: { type: [number, 'null'], minimum: 0 }
+        value: { type: [number, 'null'], minimum: 0 }
+        weight_kg: { type: [number, 'null'], minimum: 0 }
+        hs_code: { type: [string, 'null'], maxLength: 50 }
+        origin_country: { type: [string, 'null'], maxLength: 100 }
+    Cn22ShipmentInput:
+      type: object
+      required: [tracking_code, origin_office, destination_office, sender_name, sender_country, sender_address, sender_phone, recipient_name, recipient_document, recipient_address, recipient_address_reference, recipient_city, recipient_department, recipient_phone, description, gross_weight_grams, length_cm, width_cm, height_cm]
+      anyOf:
+        - required: [value_fob_usd]
+        - required: [declared_amount]
+      properties:
+        tracking_code: { type: string, maxLength: 100 }
+        origin_office: { type: string, maxLength: 150 }
+        destination_office: { type: string, maxLength: 150 }
+        sender_name: { type: string, maxLength: 255 }
+        sender_country: { type: string, maxLength: 100 }
+        sender_address: { type: string, maxLength: 255 }
+        sender_phone: { type: string, maxLength: 50 }
+        recipient_name: { type: string, maxLength: 255 }
+        recipient_document: { type: string, maxLength: 100 }
+        recipient_address: { type: string, maxLength: 255 }
+        recipient_address_reference: { type: string, maxLength: 255 }
+        recipient_city: { type: string, maxLength: 100 }
+        recipient_department: { type: string, maxLength: 100 }
+        recipient_phone: { type: string, maxLength: 50 }
+        recipient_whatsapp: { type: [string, 'null'], maxLength: 50 }
+        destination: { type: [string, 'null'], maxLength: 255 }
+        description: { type: string, maxLength: 500 }
+        gross_weight_grams: { type: integer, minimum: 1 }
+        weight_kg: { type: [number, 'null'], exclusiveMinimum: 0 }
+        length_cm: { type: number, exclusiveMinimum: 0 }
+        width_cm: { type: number, exclusiveMinimum: 0 }
+        height_cm: { type: number, exclusiveMinimum: 0 }
+        value_fob_usd: { type: number, exclusiveMinimum: 0 }
+        declared_amount: { type: number, exclusiveMinimum: 0 }
+        shipment_date: { type: [string, 'null'] }
+        customs_items:
+          type: [array, 'null']
+          items: { $ref: '#/components/schemas/Cn22CustomsItemInput' }
+    BulkPackageInput:
+      allOf:
+        - $ref: '#/components/schemas/Cn33PackageInput'
+        - type: object
+          required: [cn22]
+          properties:
+            reference: { type: [string, 'null'], maxLength: 100 }
+            cn22: { $ref: '#/components/schemas/Cn22ShipmentInput' }
+    BulkBagInput:
+      allOf:
+        - $ref: '#/components/schemas/Cn31BagInput'
+        - type: object
+          required: [packages]
+          properties:
+            packages:
+              type: array
+              minItems: 1
+              items: { $ref: '#/components/schemas/BulkPackageInput' }
+    BulkIntegrationRequest:
+      type: object
+      required: [manifest]
+      properties:
+        manifest:
+          type: object
+          required: [cn31_number, dispatch_number_manifest, origin_office, destination_office, dispatch_date, bags]
+          properties:
+            cn31_number: { type: string, maxLength: 100, description: 'Full Dispatch-ID printed below the CN31 barcode.', example: CWPUNAPELIMAAUX60063 }
+            dispatch_number_manifest: { type: string, maxLength: 255, pattern: '^[0-9]+$', description: 'Digits-only Dispatch No. serial; variable length; preserve leading zeros.', example: '0063' }
+            origin_office: { type: string, maxLength: 150, description: 'Six-character IMPC code.', example: CWPUNA }
+            destination_office: { type: string, maxLength: 150, description: 'Six-character IMPC code.', example: PELIMA }
+            dispatch_date: { type: string, pattern: '^\d{4}-\d{2}-\d{2} 00:00:00$', description: 'CN31 date normalized to midnight UTC; the CN38 flight departure time is a separate value.', example: '2026-10-20 00:00:00' }
+            bags:
+              type: array
+              minItems: 1
+              items: { $ref: '#/components/schemas/BulkBagInput' }
     Cn31ManifestListItem:
       type: object
-      required: [cn31_number, origin_office, destination_office, status, total_bags, total_packages, total_weight_kg, bags_count]
+      required: [cn31_number, dispatch_number_manifest, origin_office, destination_office, status, total_bags, total_packages, total_weight_kg, bags_count]
       properties:
         cn31_number: { type: string, maxLength: 100 }
-        dispatch_number_manifest: { type: [string, 'null'], pattern: '^[0-9]{10}$' }
+        dispatch_number_manifest: { type: [string, 'null'], maxLength: 255, pattern: '^[0-9]+$' }
         origin_office: { type: string, maxLength: 150 }
         destination_office: { type: string, maxLength: 150 }
         dispatch_date: { type: [string, 'null'], format: date-time }

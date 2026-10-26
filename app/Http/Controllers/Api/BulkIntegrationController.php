@@ -36,11 +36,10 @@ class BulkIntegrationController extends Controller
                 ),
             ],
             'manifest.dispatch_number_manifest' => [
-                'nullable',
-                'regex:/^[0-9]{10}$/',
-                Rule::unique('cn31_manifests', 'dispatch_number_manifest')->where(
-                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
-                ),
+                'required',
+                'string',
+                'max:255',
+                'regex:/^[0-9]+$/',
             ],
             'manifest.origin_office' => ['required', 'string', 'max:150'],
             'manifest.destination_office' => ['required', 'string', 'max:150'],
@@ -52,15 +51,6 @@ class BulkIntegrationController extends Controller
                 'max:100',
                 'distinct',
                 Rule::unique('cn31_bags', 'bag_number')->where(
-                    fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
-                ),
-            ],
-            'manifest.bags.*.dispatch_number_bag' => [
-                'nullable',
-                'string',
-                'max:30',
-                'distinct',
-                Rule::unique('cn31_bags', 'dispatch_number_bag')->where(
                     fn ($query) => ApiTokenContext::applyCompanyScope($query, $company->id, $apiToken)
                 ),
             ],
@@ -117,6 +107,7 @@ class BulkIntegrationController extends Controller
             'manifest.array' => __('api.validation.bulk_manifest_array'),
             'manifest.cn31_number.required' => __('api.validation.cn31_number_required'),
             'manifest.cn31_number.unique' => __('api.validation.cn31_number_unique'),
+            'manifest.dispatch_number_manifest.required' => __('api.validation.dispatch_number_manifest_required'),
             'manifest.origin_office.required' => __('api.validation.origin_office_required'),
             'manifest.destination_office.required' => __('api.validation.destination_office_required'),
             'manifest.dispatch_date.required' => __('api.validation.dispatch_date_required'),
@@ -126,11 +117,7 @@ class BulkIntegrationController extends Controller
             'manifest.bags.*.bag_number.required' => __('api.validation.bag_number_required'),
             'manifest.bags.*.bag_number.distinct' => __('api.validation.bag_number_distinct'),
             'manifest.bags.*.bag_number.unique' => __('api.validation.bag_number_unique'),
-            'manifest.bags.*.dispatch_number_bag.string' => __('api.validation.dispatch_number_bag_format'),
-            'manifest.bags.*.dispatch_number_bag.distinct' => 'The bag dispatch number must not be repeated.',
-            'manifest.bags.*.dispatch_number_bag.unique' => 'The bag dispatch number has already been registered.',
-            'manifest.dispatch_number_manifest.regex' => 'The manifest dispatch number must contain exactly 10 digits.',
-            'manifest.dispatch_number_manifest.unique' => 'The manifest dispatch number has already been registered.',
+            'manifest.dispatch_number_manifest.regex' => 'The manifest dispatch number must contain digits only.',
             'manifest.bags.*.package_count.required' => __('api.validation.package_count_required'),
             'manifest.bags.*.package_count.integer' => __('api.validation.package_count_integer'),
             'manifest.bags.*.total_weight_kg.required' => __('api.validation.bag_total_weight_required'),
@@ -286,7 +273,7 @@ class BulkIntegrationController extends Controller
                 'company_id' => $company->id,
                 ...ApiTokenContext::ownershipAttributes($apiToken),
                 'cn31_number' => $manifestData['cn31_number'],
-                'dispatch_number_manifest' => $manifestData['dispatch_number_manifest'] ?? null,
+                'dispatch_number_manifest' => $manifestData['dispatch_number_manifest'],
                 'origin_office' => $manifestData['origin_office'],
                 'destination_office' => $manifestData['destination_office'],
                 'dispatch_date' => $manifestData['dispatch_date'],
@@ -309,7 +296,6 @@ class BulkIntegrationController extends Controller
                     'company_id' => $company->id,
                     ...ApiTokenContext::ownershipAttributes($apiToken),
                     'bag_number' => $bagPayload['bag_number'],
-                    'dispatch_number_bag' => $bagPayload['dispatch_number_bag'] ?? null,
                     'declared_package_count' => $bagPayload['package_count'],
                     'declared_weight_kg' => $bagPayload['total_weight_kg'],
                     'status' => 'pendiente_cn33',
@@ -365,7 +351,6 @@ class BulkIntegrationController extends Controller
                             'integration_type' => 'bulk_cn31_cn33_cn22',
                             'cn31_number' => $manifest->cn31_number,
                             'bag_number' => $bag->bag_number,
-                            'dispatch_number_bag' => $bag->dispatch_number_bag,
                             'sender' => [
                                 'name' => $cn22['sender_name'],
                                 'country' => $cn22['sender_country'],
@@ -434,7 +419,6 @@ class BulkIntegrationController extends Controller
                     $createdPackages->push([
                         'tracking_code' => $package->tracking_code,
                         'bag_number' => $bag->bag_number,
-                        'dispatch_number_bag' => $bag->dispatch_number_bag,
                         'status' => $package->status,
                     ]);
                 }
@@ -474,7 +458,6 @@ class BulkIntegrationController extends Controller
                 'bags' => $manifest->bags->map(fn ($bag) => [
                     'bag_id' => $bag->id,
                     'bag_number' => $bag->bag_number,
-                    'dispatch_number_bag' => $bag->dispatch_number_bag,
                     'status' => $bag->status,
                     'operational_status' => $bag->operational_status,
                     'operational_status_label' => __('api.statuses.'.$bag->operational_status),

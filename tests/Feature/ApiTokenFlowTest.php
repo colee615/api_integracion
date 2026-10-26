@@ -51,13 +51,13 @@ class ApiTokenFlowTest extends TestCase
 
         $this->postJson('/api/v1/cn31/manifests', [
             'cn31_number' => 'CN31-EN-001',
+            'dispatch_number_manifest' => '0001',
             'origin_office' => 'COCHABAMBA',
             'destination_office' => 'LA PAZ',
             'dispatch_date' => '2026-03-31 16:00:00',
             'bags' => [
                 [
                     'bag_number' => 'SACA-EN-001',
-                    'dispatch_number_bag' => '9876543210',
                     'package_count' => 1,
                     'total_weight_kg' => 0.250,
                 ],
@@ -66,7 +66,7 @@ class ApiTokenFlowTest extends TestCase
             ->assertCreated()
             ->assertJsonPath('message', 'CN31 received successfully.');
 
-        $this->postJson('/api/v1/cn33/bags/9876543210/packages', [
+        $this->postJson('/api/v1/cn33/bags/SACA-EN-001/packages', [
             'packages' => [
                 [
                     'tracking_code' => 'EN000000201BO',
@@ -388,13 +388,13 @@ class ApiTokenFlowTest extends TestCase
 
         $this->postJson('/api/v1/cn31/manifests', [
             'cn31_number' => 'CN31-0001-BO',
+            'dispatch_number_manifest' => '0001',
             'origin_office' => 'COCHABAMBA',
             'destination_office' => 'LA PAZ',
             'dispatch_date' => '2026-03-31 16:00:00',
             'bags' => [
                 [
                     'bag_number' => 'SACA-001',
-                    'dispatch_number_bag' => '1111111111',
                     'package_count' => 2,
                     'total_weight_kg' => 0.500,
                 ],
@@ -404,7 +404,7 @@ class ApiTokenFlowTest extends TestCase
             ->assertJsonPath('success', true)
             ->assertJsonPath('data.status', 'pendiente_cn33');
 
-        $this->postJson('/api/v1/cn33/bags/1111111111/packages', [
+        $this->postJson('/api/v1/cn33/bags/SACA-001/packages', [
             'packages' => [
                 [
                     'tracking_code' => 'EN000000001BO',
@@ -467,7 +467,6 @@ class ApiTokenFlowTest extends TestCase
         $this->assertDatabaseHas('cn31_bags', [
             'company_id' => $company->id,
             'bag_number' => 'SACA-001',
-            'dispatch_number_bag' => '1111111111',
             'status' => 'conciliado',
         ]);
 
@@ -479,60 +478,12 @@ class ApiTokenFlowTest extends TestCase
         $this->assertNotNull($package);
         $this->assertSame('CN31-0001-BO', $package->meta['cn31_number']);
         $this->assertSame('SACA-001', $package->meta['bag_number']);
-        $this->assertSame('1111111111', $package->meta['dispatch_number_bag']);
 
         $this->assertDatabaseHas('cn33_packages', [
             'company_id' => $company->id,
             'tracking_code' => 'EN000000001BO',
             'status' => 'documentado_cn22',
             'package_id' => $package->id,
-        ]);
-    }
-
-    public function test_cn31_accepts_alphanumeric_dispatch_number_bag(): void
-    {
-        $company = Company::create([
-            'name' => 'Empresa Alfanumerica',
-            'slug' => 'empresa-alfanumerica',
-            'status' => 'active',
-        ]);
-
-        [, $plainTextToken] = ApiToken::issue(
-            $company,
-            'Token Alfanumerico',
-            now()->subMinute(),
-            now()->addDays(30)
-        );
-
-        $headers = [
-            'Authorization' => 'Bearer '.$plainTextToken,
-            'Accept' => 'application/json',
-        ];
-
-        $this->postJson('/api/v1/cn31/manifests', [
-            'cn31_number' => 'CN31-ALFA-001',
-            'dispatch_number_manifest' => '0000000001',
-            'origin_office' => 'SHANGHAI',
-            'destination_office' => 'LA PAZ',
-            'dispatch_date' => '2026-04-08 09:30:00',
-            'bags' => [
-                [
-                    'bag_number' => 'CD00021',
-                    'dispatch_number_bag' => 'CD00021',
-                    'package_count' => 3,
-                    'total_weight_kg' => 2.150,
-                    'dispatch_note' => 'Pre-alerta inicial desde China para Bolivia',
-                ],
-            ],
-        ], $headers)
-            ->assertCreated()
-            ->assertJsonPath('data.dispatch_number_manifest', '0000000001')
-            ->assertJsonPath('data.bags.0.dispatch_number_bag', 'CD00021');
-
-        $this->assertDatabaseHas('cn31_bags', [
-            'company_id' => $company->id,
-            'bag_number' => 'CD00021',
-            'dispatch_number_bag' => 'CD00021',
         ]);
     }
 
@@ -559,13 +510,13 @@ class ApiTokenFlowTest extends TestCase
         $this->postJson('/api/v1/integration/bulk', [
             'manifest' => [
                 'cn31_number' => 'CN31-BULK-001',
+                'dispatch_number_manifest' => '0001',
                 'origin_office' => 'COCHABAMBA',
                 'destination_office' => 'LA PAZ',
                 'dispatch_date' => '2026-04-08 11:00:00',
                 'bags' => [
                     [
                         'bag_number' => 'SACA-BULK-001',
-                        'dispatch_number_bag' => '2222222222',
                         'package_count' => 2,
                         'total_weight_kg' => 0.500,
                         'dispatch_note' => 'Carga masiva principal',
@@ -652,7 +603,6 @@ class ApiTokenFlowTest extends TestCase
         $this->assertDatabaseHas('cn31_bags', [
             'company_id' => $company->id,
             'bag_number' => 'SACA-BULK-001',
-            'dispatch_number_bag' => '2222222222',
             'status' => 'conciliado',
         ]);
 
@@ -692,13 +642,13 @@ class ApiTokenFlowTest extends TestCase
         $this->postJson('/api/v1/integration/bulk', [
             'manifest' => [
                 'cn31_number' => 'CN31-BULK-INVALID-001',
+                'dispatch_number_manifest' => '0002',
                 'origin_office' => 'COCHABAMBA',
                 'destination_office' => 'LA PAZ',
                 'dispatch_date' => '2026-04-08 11:00:00',
                 'bags' => [
                     [
                         'bag_number' => 'SACA-BULK-INVALID-001',
-                        'dispatch_number_bag' => '3333333333',
                         'package_count' => 2,
                         'total_weight_kg' => 0.700,
                         'packages' => [
@@ -793,6 +743,7 @@ class ApiTokenFlowTest extends TestCase
 
         $this->postJson('/api/v1/cn31/manifests', [
             'cn31_number' => 'CN31-ERROR',
+            'dispatch_number_manifest' => '0001',
             'origin_office' => 'COCHABAMBA',
             'bags' => [
                 [
@@ -815,6 +766,7 @@ class ApiTokenFlowTest extends TestCase
 
         $this->postJson('/api/v1/cn31/manifests', [
             'cn31_number' => 'CN31-VALIDO',
+            'dispatch_number_manifest' => '0002',
             'origin_office' => 'COCHABAMBA',
             'destination_office' => 'LA PAZ',
             'dispatch_date' => '2026-03-31 16:00:00',
@@ -1174,20 +1126,20 @@ class ApiTokenFlowTest extends TestCase
 
         $this->postJson('/api/v1/cn31/manifests', [
             'cn31_number' => 'CN31-TRIAL-001',
+            'dispatch_number_manifest' => '0001',
             'origin_office' => 'COCHABAMBA',
             'destination_office' => 'LA PAZ',
             'dispatch_date' => '2026-08-11 10:00:00',
             'bags' => [
                 [
                     'bag_number' => 'TRIAL-BAG-001',
-                    'dispatch_number_bag' => 'TRIAL00001',
                     'package_count' => 1,
                     'total_weight_kg' => 0.250,
                 ],
             ],
         ], $trialHeaders)->assertCreated();
 
-        $this->postJson('/api/v1/cn33/bags/TRIAL00001/packages', [
+        $this->postJson('/api/v1/cn33/bags/TRIAL-BAG-001/packages', [
             'packages' => [
                 [
                     'tracking_code' => 'EN000001001BO',
@@ -1230,7 +1182,7 @@ class ApiTokenFlowTest extends TestCase
             ->where('bag_number', 'TRIAL-BAG-001')
             ->firstOrFail();
 
-        $this->postJson('/api/v1/cn33/bags/TRIAL00001/movements', [
+        $this->postJson('/api/v1/cn33/bags/TRIAL-BAG-001/movements', [
             'ips_operation_code' => 'RECEPTACLE_RECEIVE',
             'location_code' => 'TEST-OFFICE',
             'location' => 'Oficina de prueba',
@@ -1238,7 +1190,7 @@ class ApiTokenFlowTest extends TestCase
             'occurred_at' => now()->subMinutes(2)->toIso8601String(),
         ], $trialHeaders)->assertCreated();
 
-        $this->postJson('/api/v1/cn33/bags/TRIAL00001/movements', [
+        $this->postJson('/api/v1/cn33/bags/TRIAL-BAG-001/movements', [
             'ips_operation_code' => 'RECEPTACLE_OPEN',
             'location_code' => 'TEST-OFFICE',
             'location' => 'Oficina de prueba',

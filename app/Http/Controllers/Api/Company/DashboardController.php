@@ -211,7 +211,6 @@ class DashboardController extends Controller
                     ->map(fn ($bag) => [
                         'id' => $bag->id,
                         'bag_number' => $bag->bag_number,
-                        'dispatch_number_bag' => $bag->dispatch_number_bag,
                         'manifest_number' => $bag->manifest?->cn31_number,
                         'declared_package_count' => $bag->declared_package_count,
                         'declared_weight_kg' => (float) $bag->declared_weight_kg,
@@ -293,7 +292,6 @@ class DashboardController extends Controller
                         'status_label' => PackageStatusCatalog::labelForStatus($package->status),
                         'manifest_number' => $package->meta['cn31_number'] ?? null,
                         'bag_number' => $package->meta['bag_number'] ?? null,
-                        'dispatch_number_bag' => $package->meta['dispatch_number_bag'] ?? null,
                         'registered_at' => $package->registered_at?->toIso8601String(),
                         'last_movement_at' => $package->last_movement_at?->toIso8601String(),
                         'delivery_attempts' => (int) $package->delivery_attempts,
@@ -343,7 +341,6 @@ class DashboardController extends Controller
                         'bags' => $manifest->bags->map(fn ($bag) => [
                             'id' => $bag->id,
                             'bag_number' => $bag->bag_number,
-                            'dispatch_number_bag' => $bag->dispatch_number_bag,
                             'status' => $bag->status,
                             'operational_status' => $bag->operational_status,
                             'operational_status_label' => __('api.statuses.'.$bag->operational_status),

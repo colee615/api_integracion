@@ -28,7 +28,11 @@
     },
     {
       "key": "cn31_number",
-      "value": "CN31-360LIONS-0001"
+      "value": "CWPUNAPELIMAAUX60063"
+    },
+    {
+      "key": "dispatch_number_manifest",
+      "value": "0063"
     },
     {
       "key": "bag_number",
@@ -140,7 +144,7 @@
         ],
         "body": {
           "mode": "raw",
-          "raw": "{\n  \"cn31_number\": \"{{cn31_number}}\",\n  \"origin_office\": \"COCHABAMBA\",\n  \"destination_office\": \"LA PAZ\",\n  \"dispatch_date\": \"2026-04-08 10:00:00\",\n  \"bags\": [\n    {\n      \"bag_number\": \"{{bag_number}}\",\n      \"package_count\": 1,\n      \"total_weight_kg\": 0.250,\n      \"seal_number\": \"PRECINTO-360-01\",\n      \"dispatch_note\": \"Carga 360 Lions\"\n    }\n  ]\n}"
+          "raw": "{\n  \"cn31_number\": \"{{cn31_number}}\",\n  \"dispatch_number_manifest\": \"{{dispatch_number_manifest}}\",\n  \"origin_office\": \"CWPUNA\",\n  \"destination_office\": \"PELIMA\",\n  \"dispatch_date\": \"2026-10-20 00:00:00\",\n  \"bags\": [\n    {\n      \"bag_number\": \"{{bag_number}}\",\n      \"package_count\": 1,\n      \"total_weight_kg\": 0.250,\n      \"dispatch_note\": \"Carga 360 Lions\"\n    }\n  ]\n}"
         },
         "url": {
           "raw": "{{base_url}}/cn31/manifests",
@@ -225,6 +229,47 @@
       }
     },
     {
+      "name": "Registrar CN31 + CN33 + CN22 (bulk)",
+      "description": "One-call request. Use this endpoint only when sending the full manifest, bags, packages, and CN22 declarations together.",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Accept",
+            "value": "application/json"
+          },
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{api_token}}"
+          }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"manifest\": {\n    \"cn31_number\": \"{{cn31_number}}\",\n    \"dispatch_number_manifest\": \"{{dispatch_number_manifest}}\",\n    \"origin_office\": \"CWPUNA\",\n    \"destination_office\": \"PELIMA\",\n    \"dispatch_date\": \"2026-10-20 00:00:00\",\n    \"bags\": [\n      {\n        \"bag_number\": \"{{bag_number}}\",\n        \"package_count\": 1,\n        \"total_weight_kg\": 0.25,\n        \"packages\": [\n          {\n            \"tracking_code\": \"{{tracking_code}}\",\n            \"origin\": \"COCHABAMBA\",\n            \"destination\": \"LA PAZ\",\n            \"weight_kg\": 0.25,\n            \"cn22\": {\n              \"tracking_code\": \"{{tracking_code}}\",\n              \"origin_office\": \"COCHABAMBA\",\n              \"destination_office\": \"LA PAZ\",\n              \"sender_name\": \"360 Lions\",\n              \"sender_country\": \"BOLIVIA\",\n              \"sender_address\": \"Av. Integracion 100\",\n              \"sender_phone\": \"70000001\",\n              \"recipient_name\": \"Cliente Uno\",\n              \"recipient_document\": \"7000001\",\n              \"recipient_address\": \"Calle Uno 123\",\n              \"recipient_address_reference\": \"Puerta azul\",\n              \"recipient_city\": \"LA PAZ\",\n              \"recipient_department\": \"LA PAZ\",\n              \"recipient_phone\": \"71111111\",\n              \"recipient_whatsapp\": \"71111111\",\n              \"description\": \"Documentos\",\n              \"gross_weight_grams\": 250,\n              \"length_cm\": 20,\n              \"width_cm\": 15,\n              \"height_cm\": 2,\n              \"value_fob_usd\": 17.0\n            }\n          }\n        ]\n      }\n    ]\n  }\n}",
+          "options": {
+            "raw": {
+              "language": "json"
+            }
+          }
+        },
+        "url": {
+          "raw": "{{base_url}}/integration/bulk",
+          "host": [
+            "{{base_url}}"
+          ],
+          "path": [
+            "integration",
+            "bulk"
+          ]
+        }
+      },
+      "response": []
+    },
+    {
       "name": "Listar despachos CN31",
       "request": {
         "method": "GET",
@@ -266,7 +311,7 @@
             }
           ]
         },
-        "description": "Requiere documents:read. Devuelve despachos ordenados por dispatch_date descendente, con 20 resultados por defecto y hasta 100 por página. Filtros: dispatch_number_manifest (coincidencia exacta), dispatch_date_from/to (fecha declarada), received_at_from/to (fecha de recepción de la API). Los rangos son inclusivos y usan YYYY-MM-DD. Edita o elimina los parámetros de ejemplo según la consulta."
+        "description": "Requiere documents:read. Devuelve despachos ordenados por dispatch_date descendente, con 20 resultados por defecto y hasta 100 por página. Filtros: dispatch_number_manifest (coincidencia exacta; solo dígitos, longitud variable, conserva ceros iniciales; puede devolver varios despachos si el serial se repite), dispatch_date_from/to (fecha declarada), received_at_from/to (fecha de recepción de la API). Los rangos son inclusivos y usan YYYY-MM-DD. Edita o elimina los parámetros de ejemplo según la consulta."
       }
     },
     {

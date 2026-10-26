@@ -204,7 +204,6 @@ class Cn22ShipmentController extends Controller
                         'integration_type' => 'cn22',
                         'cn31_number' => $cn33Item?->bag?->manifest?->cn31_number,
                         'bag_number' => $cn33Item?->bag?->bag_number,
-                        'dispatch_number_bag' => $cn33Item?->bag?->dispatch_number_bag,
                         'sender' => [
                             'name' => $record['sender_name'],
                             'country' => $record['sender_country'],

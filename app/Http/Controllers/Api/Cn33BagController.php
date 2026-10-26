@@ -29,10 +29,7 @@ class Cn33BagController extends Controller
             Cn31Bag::query()->with('manifest')->where('company_id', $company->id),
             $apiToken
         )
-            ->where(function ($query) use ($bagReference) {
-                $query->where('dispatch_number_bag', $bagReference)
-                    ->orWhere('bag_number', $bagReference);
-            })
+            ->where('bag_number', $bagReference)
             ->first();
 
         if (! $bag) {
@@ -94,7 +91,6 @@ class Cn33BagController extends Controller
                         'meta' => array_merge($package->meta ?? [], [
                             'cn31_number' => $bag->manifest?->cn31_number,
                             'bag_number' => $bag->bag_number,
-                            'dispatch_number_bag' => $bag->dispatch_number_bag,
                         ]),
                     ])->save();
                 }
@@ -137,7 +133,6 @@ class Cn33BagController extends Controller
             'data' => [
                 'bag_id' => $bag->id,
                 'bag_number' => $bag->bag_number,
-                'dispatch_number_bag' => $bag->dispatch_number_bag,
                 'manifest_number' => $bag->manifest?->cn31_number,
                 'status' => $bag->status,
                 'status_label' => PackageStatusCatalog::labelForStatus($bag->status),
@@ -164,10 +159,7 @@ class Cn33BagController extends Controller
             Cn31Bag::query()->with(['manifest', 'cn33Packages.package', 'movements.actor'])->where('company_id', $company->id),
             $apiToken
         )
-            ->where(function ($query) use ($bagReference) {
-                $query->where('dispatch_number_bag', $bagReference)
-                    ->orWhere('bag_number', $bagReference);
-            })
+            ->where('bag_number', $bagReference)
             ->first();
 
         if (! $bag) {
@@ -184,7 +176,6 @@ class Cn33BagController extends Controller
             'data' => [
                 'id' => $bag->id,
                 'bag_number' => $bag->bag_number,
-                'dispatch_number_bag' => $bag->dispatch_number_bag,
                 'manifest_number' => $bag->manifest?->cn31_number,
                 'declared_package_count' => $bag->declared_package_count,
                 'declared_weight_kg' => (float) $bag->declared_weight_kg,

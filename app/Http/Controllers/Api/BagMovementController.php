@@ -118,18 +118,10 @@ class BagMovementController extends Controller
             Cn31Bag::query()->where('company_id', $company->id),
             $apiToken
         )
-            ->where(fn ($query) => $query->where('dispatch_number_bag', $bagReference)
-                ->orWhere('bag_number', $bagReference))
-            ->limit(2)
-            ->get();
+            ->where('bag_number', $bagReference)
+            ->firstOrFail();
 
-        if ($matches->count() > 1) {
-            throw ValidationException::withMessages([
-                'bag_reference' => ['La referencia coincide con más de una saca; use el número de despacho.'],
-            ]);
-        }
-
-        return $matches->firstOrFail();
+        return $matches;
     }
 
     private function transformMovement(Cn31BagMovement $movement): array

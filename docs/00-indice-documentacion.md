@@ -83,6 +83,7 @@ El token se genera manualmente desde el panel administrativo y luego se reutiliz
 - `POST /api/v1/cn31/manifests`
 - `POST /api/v1/cn33/bags/{bagNumber}/packages`
 - `POST /api/v1/cn22/shipments`
+- `POST /api/v1/integration/bulk` (CN31 + CN33 + CN22 en una sola solicitud)
 - `GET /api/v1/packages`
 - `POST /api/v1/packages/{trackingCode}/movements`
 - `GET /api/v1/cn33/bags/{bagReference}/movements`
@@ -358,16 +359,16 @@ Crear el manifiesto principal y sus sacas.
 
 ```json
 {
-  "cn31_number": "CN31-0001-BO",
-  "origin_office": "COCHABAMBA",
-  "destination_office": "LA PAZ",
-  "dispatch_date": "2026-03-31 16:00:00",
+  "cn31_number": "CWPUNAPELIMAAUX60063",
+  "dispatch_number_manifest": "0063",
+  "origin_office": "CWPUNA",
+  "destination_office": "PELIMA",
+  "dispatch_date": "2026-10-20 00:00:00",
   "bags": [
     {
       "bag_number": "SACA-001",
       "package_count": 2,
       "total_weight_kg": 0.500,
-      "seal_number": "PRECINTO-01",
       "dispatch_note": "Carga inicial"
     }
   ]
@@ -377,6 +378,7 @@ Crear el manifiesto principal y sus sacas.
 ### Campos obligatorios
 
 - `cn31_number`
+- `dispatch_number_manifest`
 - `origin_office`
 - `destination_office`
 - `dispatch_date`
@@ -387,10 +389,16 @@ Crear el manifiesto principal y sus sacas.
 
 ### Reglas
 
-- `cn31_number` unico por empresa
-- `dispatch_date` en formato `Y-m-d H:i:s`
+- La unicidad de `cn31_number` se aplica dentro del alcance de empresa/token
+- `cn31_number` recibe el `Dispatch-ID` completo impreso bajo el codigo de barras del CN31
+- `dispatch_number_manifest` recibe el campo numerico `Dispatch No.` del CN31; es una cadena de longitud variable formada solo por digitos y conserva ceros iniciales (por ejemplo, `0063`)
+- `dispatch_number_manifest` es obligatorio y puede repetirse si el serial se reutiliza en otra serie; `cn31_number` es el identificador para consultar un despacho dentro del alcance autenticado
+- `dispatch_date` usa la fecha del CN31. Como el formulario no trae hora, enviarla como `YYYY-MM-DD 00:00:00`; la API la interpreta en UTC. No usar la hora de salida del vuelo del CN38.
+- En CN31, `origin_office` y `destination_office` usan los códigos IMPC de seis caracteres de las oficinas de intercambio (por ejemplo, `CWPUNA` y `PELIMA`). La API los guarda como texto y no valida el catálogo IMPC.
 - `bags` minimo `1`
 - `bag_number` unico por empresa y distinto dentro del mismo request
+- `bag_number` es el identificador unico de cada saca, asignado por 360Lions; debe ser unico en el alcance de empresa/token y reutilizarse sin cambios en las llamadas CN33 y de movimientos
+- En el endpoint CN31, cada saca queda asociada al despacho al incluirse en `bags[]`; en carga masiva, la lista va en `manifest.bags[]`. 360Lions proporciona `bag_number`; la API no lo deriva del CN31/CN38 ni usa un campo separado `dispatch_number_bag`
 - `package_count` entero mayor o igual a `1`
 - `total_weight_kg` mayor a `0`
 
@@ -402,7 +410,8 @@ Crear el manifiesto principal y sus sacas.
   "message": "CN31 recibido correctamente.",
   "data": {
     "manifest_id": 1,
-    "cn31_number": "CN31-0001-BO",
+    "cn31_number": "CWPUNAPELIMAAUX60063",
+    "dispatch_number_manifest": "0063",
     "status": "pendiente_cn33",
     "total_bags": 1,
     "total_packages": 2,
@@ -562,17 +571,17 @@ Registrar en una sola operacion:
 ```json
 {
   "manifest": {
-    "cn31_number": "CN31-BULK-001",
-    "origin_office": "COCHABAMBA",
-    "destination_office": "LA PAZ",
-    "dispatch_date": "2026-04-08 11:00:00",
+    "cn31_number": "CWPUNAPELIMAAUX60063",
+    "dispatch_number_manifest": "0063",
+    "origin_office": "CWPUNA",
+    "destination_office": "PELIMA",
+    "dispatch_date": "2026-10-20 00:00:00",
     "bags": [
       {
         "bag_number": "SACA-BULK-001",
         "package_count": 1,
         "total_weight_kg": 0.250,
-        "seal_number": "PRECINTO-01",
-        "dispatch_note": "Carga masiva",
+          "dispatch_note": "Carga masiva",
         "packages": [
           {
             "tracking_code": "EN000000901BO",
@@ -728,7 +737,7 @@ GET /api/v1/cn31/manifests
 - paginado
 - orden descendente por `dispatch_date`
 - incluye `bags_count`
-- filtros opcionales exactos por `dispatch_number_manifest` y por rangos inclusivos `dispatch_date_from` / `dispatch_date_to` y `received_at_from` / `received_at_to`
+- filtros opcionales exactos por `dispatch_number_manifest` (cadena de solo digitos, longitud variable; conserva ceros iniciales) y por rangos inclusivos `dispatch_date_from` / `dispatch_date_to` y `received_at_from` / `received_at_to`
 - fechas en formato `YYYY-MM-DD`; `dispatch_date` es la fecha declarada y `received_at` el momento en que la API registró el CN31
 - `per_page` configurable entre 1 y 100 (predeterminado 20); `page` comienza en 1 y los enlaces conservan los filtros
 - cada elemento devuelve únicamente `cn31_number`, `dispatch_number_manifest`, `origin_office`, `destination_office`, `dispatch_date`, `received_at`, `status`, `status_label`, `delivery_status`, `delivery_status_label`, `total_bags`, `total_packages`, `total_weight_kg` y `bags_count`
@@ -739,7 +748,7 @@ La respuesta conserva el paginador estándar en el nivel raíz: `data` contiene 
 Ejemplos:
 
 ```http
-GET /api/v1/cn31/manifests?dispatch_number_manifest=2026000333
+GET /api/v1/cn31/manifests?dispatch_number_manifest=0063
 GET /api/v1/cn31/manifests?dispatch_date_from=2026-10-01&dispatch_date_to=2026-10-31&per_page=100
 GET /api/v1/cn31/manifests?received_at_from=2026-10-01&received_at_to=2026-10-31
 ```

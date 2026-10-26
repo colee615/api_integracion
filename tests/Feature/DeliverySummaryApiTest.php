@@ -40,8 +40,8 @@ class DeliverySummaryApiTest extends TestCase
             'delivery_status' => 'en_proceso',
         ]);
 
-        $bagInProcess = $this->createBag($company, $manifest, 'BAG-001', 'DISPATCH-001', 'en_proceso');
-        $pendingBag = $this->createBag($company, $manifest, 'BAG-002', 'DISPATCH-002', 'pendiente');
+        $bagInProcess = $this->createBag($company, $manifest, 'BAG-001', 'en_proceso');
+        $pendingBag = $this->createBag($company, $manifest, 'BAG-002', 'pendiente');
 
         $this->createCn33Row($company, $bagInProcess, 'PKG-DONE', 'completado');
         $this->createCn33Row($company, $bagInProcess, 'PKG-PROCESS', 'en_proceso');
@@ -65,7 +65,7 @@ class DeliverySummaryApiTest extends TestCase
         $this->assertSame(1, $bagsByNumber->get('BAG-001')['delivery_summary']['in_process_packages']);
         $this->assertSame(1, $bagsByNumber->get('BAG-002')['delivery_summary']['pending_packages']);
 
-        $this->getJson('/api/v1/cn33/bags/DISPATCH-001', $headers)
+        $this->getJson('/api/v1/cn33/bags/BAG-001', $headers)
             ->assertOk()
             ->assertJsonPath('data.bag_number', 'BAG-001')
             ->assertJsonPath('data.delivery_summary.registered_packages', 2)
@@ -75,7 +75,7 @@ class DeliverySummaryApiTest extends TestCase
             ->assertJsonCount(2, 'data.packages');
 
         $this->getJson('/api/v1/packages/PKG-DONE', $headers)->assertForbidden();
-        $this->getJson('/api/v1/cn33/bags/DISPATCH-001/movements', $headers)->assertForbidden();
+        $this->getJson('/api/v1/cn33/bags/BAG-001/movements', $headers)->assertForbidden();
     }
 
     public function test_cn31_manifest_list_supports_date_dispatch_and_pagination_filters(): void
@@ -90,7 +90,7 @@ class DeliverySummaryApiTest extends TestCase
         );
         $headers = $this->headers($token);
 
-        $this->createManifestForList($company, 'CN31-FILTER-001', '0000000001', '2026-10-10 09:00:00', '2026-10-12 08:00:00');
+        $this->createManifestForList($company, 'CN31-FILTER-001', '0063', '2026-10-10 09:00:00', '2026-10-12 08:00:00');
         $this->createManifestForList($company, 'CN31-FILTER-002', '0000000002', '2026-10-12 10:00:00', '2026-10-15 08:00:00');
         $this->createManifestForList($company, 'CN31-FILTER-003', '0000000003', '2026-10-12 11:00:00', '2026-10-12 18:00:00');
 
@@ -102,7 +102,7 @@ class DeliverySummaryApiTest extends TestCase
             ->assertOk()
             ->assertJsonPath('total', 2);
 
-        $this->getJson('/api/v1/cn31/manifests?dispatch_number_manifest=0000000001', $headers)
+        $this->getJson('/api/v1/cn31/manifests?dispatch_number_manifest=0063', $headers)
             ->assertOk()
             ->assertJsonPath('total', 1)
             ->assertJsonPath('data.0.cn31_number', 'CN31-FILTER-001');
@@ -120,7 +120,7 @@ class DeliverySummaryApiTest extends TestCase
             ->assertJsonPath('code', 'CN31_FILTER_VALIDATION_ERROR');
         $this->getJson('/api/v1/cn31/manifests?received_at_from=12-10-2026', $headers)->assertUnprocessable();
         $this->getJson('/api/v1/cn31/manifests?per_page=101', $headers)->assertUnprocessable();
-        $this->getJson('/api/v1/cn31/manifests?dispatch_number_manifest=123', $headers)->assertUnprocessable();
+        $this->getJson('/api/v1/cn31/manifests?dispatch_number_manifest=12A', $headers)->assertUnprocessable();
     }
 
     public function test_package_detail_exposes_origin_from_its_cn33_row(): void
@@ -151,7 +151,7 @@ class DeliverySummaryApiTest extends TestCase
             'total_packages' => 1,
             'total_weight_kg' => 0.250,
         ]);
-        $bag = $this->createBag($company, $manifest, 'ORIGIN-BAG', 'ORIGIN-DISPATCH', 'pendiente');
+        $bag = $this->createBag($company, $manifest, 'ORIGIN-BAG', 'pendiente');
         Cn33Package::create([
             'company_id' => $company->id,
             'cn31_bag_id' => $bag->id,
@@ -195,7 +195,7 @@ class DeliverySummaryApiTest extends TestCase
             'total_weight_kg' => 0.250,
             'status' => 'conciliado',
         ]);
-        $bag = $this->createBag($owner, $manifest, 'PRIVATE-BAG', 'PRIVATE-DISPATCH', 'pendiente');
+        $bag = $this->createBag($owner, $manifest, 'PRIVATE-BAG', 'pendiente');
 
         $this->getJson('/api/v1/cn31/manifests/CN31-PRIVATE-001', $ownerHeaders)->assertOk();
         $this->getJson('/api/v1/cn33/bags/PRIVATE-BAG', $ownerHeaders)->assertOk();
@@ -248,7 +248,7 @@ class DeliverySummaryApiTest extends TestCase
             'total_weight_kg' => 0,
             'status' => 'pendiente_cn33',
         ]);
-        $this->createBag($company, $manifest, 'TRIAL-BAG', 'TRIAL-DISPATCH', 'pendiente', $creator->id);
+        $this->createBag($company, $manifest, 'TRIAL-BAG', 'pendiente', $creator->id);
 
         $this->getJson('/api/v1/cn31/manifests/CN31-TRIAL-001', $this->headers($creatorToken))->assertOk();
         $this->getJson('/api/v1/cn31/manifests/CN31-TRIAL-001', $this->headers($secondTrialToken))->assertNotFound();
@@ -294,7 +294,6 @@ class DeliverySummaryApiTest extends TestCase
         Company $company,
         Cn31Manifest $manifest,
         string $bagNumber,
-        string $dispatchNumber,
         string $deliveryStatus,
         ?int $tokenId = null
     ): Cn31Bag {
@@ -303,7 +302,6 @@ class DeliverySummaryApiTest extends TestCase
             'created_by_api_token_id' => $tokenId,
             'cn31_manifest_id' => $manifest->id,
             'bag_number' => $bagNumber,
-            'dispatch_number_bag' => $dispatchNumber,
             'declared_package_count' => 1,
             'declared_weight_kg' => 0.250,
             'status' => 'conciliado',

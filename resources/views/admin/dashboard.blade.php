@@ -443,7 +443,6 @@
                     return [
                         'id' => $bag->id,
                         'bag_number' => $bag->bag_number,
-                        'dispatch_number_bag' => $bag->dispatch_number_bag,
                         'status' => $bag->status,
                         'operational_status' => $bag->operational_status,
                         'delivery_status' => $bag->delivery_status,
@@ -780,7 +779,7 @@
             body.innerHTML = manifest.bags.length
                 ? manifest.bags.map((bag) => `
                     <tr>
-                        <td><strong>${escapeHtml(bag.dispatch_number_bag || bag.bag_number)}</strong><br><small class="text-muted">${escapeHtml(bag.bag_number)}</small></td>
+                        <td><strong>${escapeHtml(bag.bag_number)}</strong></td>
                         <td>${escapeHtml(bag.loaded_package_count)} cargados / ${escapeHtml(bag.declared_package_count)} declarados</td>
                         <td>${escapeHtml(bag.loaded_weight_kg)} kg / ${escapeHtml(bag.declared_weight_kg)} kg</td>
                         <td>${dashboardBadge(bag.status)}<br><small class="text-muted">Saca: ${escapeHtml(trackingStatusLabel(bag.operational_status))} | Entrega: ${escapeHtml(trackingStatusLabel(bag.delivery_status))}</small></td>
@@ -977,12 +976,12 @@
                 return;
             }
 
-            document.getElementById('bagExplorerTitle').textContent = `Paquetes de ${bag.dispatch_number_bag || bag.bag_number}`;
+            document.getElementById('bagExplorerTitle').textContent = `Paquetes de ${bag.bag_number}`;
             document.getElementById('bagExplorerBody').innerHTML = `
                 <div class="modal-panel">
                     <div class="detail-grid">
                         <div class="item"><span class="label">CN31</span><span class="value">${escapeHtml(manifest.cn31_number)}</span></div>
-                        <div class="item"><span class="label">Despacho saca</span><span class="value">${escapeHtml(bag.dispatch_number_bag || bag.bag_number)}</span></div>
+                        <div class="item"><span class="label">Saca</span><span class="value">${escapeHtml(bag.bag_number)}</span></div>
                         <div class="item"><span class="label">Empresa</span><span class="value">${escapeHtml(manifest.company_name)}</span></div>
                         <div class="item"><span class="label">Conciliación CN33</span><span class="value">${escapeHtml(bag.status)}</span></div>
                         <div class="item"><span class="label">Estado operativo</span><span class="value">${escapeHtml(trackingStatusLabel(bag.operational_status))}</span></div>

@@ -34,13 +34,19 @@
     },
     {
       "key": "cn31_number",
-      "value": "CN31-360LIONS-0001",
+      "value": "CWPUNAPELIMAAUX60063",
+      "type": "default",
+      "enabled": true
+    },
+    {
+      "key": "dispatch_number_manifest",
+      "value": "0063",
       "type": "default",
       "enabled": true
     },
     {
       "key": "bag_number",
-      "value": "SACA-360-001",
+      "value": "PEEX260602250148",
       "type": "default",
       "enabled": true
     },

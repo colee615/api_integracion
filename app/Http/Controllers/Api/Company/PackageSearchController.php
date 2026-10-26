@@ -39,7 +39,6 @@ class PackageSearchController extends Controller
                     return [
                         'id' => $bag->id,
                         'bag_number' => $bag->bag_number,
-                        'dispatch_number_bag' => $bag->dispatch_number_bag,
                         'status' => $bag->status,
                         'delivered_at' => $bag->meta['delivered_at'] ?? null,
                         'declared_package_count' => (int) $bag->declared_package_count,
@@ -165,7 +164,6 @@ class PackageSearchController extends Controller
                     'status_label' => PackageStatusCatalog::labelForStatus($package->status),
                     'manifest_number' => $package->meta['cn31_number'] ?? null,
                     'bag_number' => $package->meta['bag_number'] ?? null,
-                    'dispatch_number_bag' => $package->meta['dispatch_number_bag'] ?? null,
                     'registered_at' => $package->registered_at?->toIso8601String(),
                     'last_movement_at' => $package->last_movement_at?->toIso8601String(),
                     'delivery_attempts' => (int) $package->delivery_attempts,
@@ -216,12 +214,8 @@ class PackageSearchController extends Controller
                 'cn33Packages.package.movements' => fn ($query) => $query->latest('occurred_at'),
             ])
             ->where('company_id', $company->id)
-            ->where(function ($builder) use ($query): void {
-                $builder
-                    ->where('bag_number', 'ilike', "%{$query}%")
-                    ->orWhere('dispatch_number_bag', 'ilike', "%{$query}%");
-            })
-            ->orderByRaw('CASE WHEN upper(coalesce(dispatch_number_bag, bag_number)) = upper(?) THEN 0 ELSE 1 END', [$query])
+            ->where('bag_number', 'ilike', "%{$query}%")
+            ->orderByRaw('CASE WHEN upper(bag_number) = upper(?) THEN 0 ELSE 1 END', [$query])
             ->latest()
             ->limit(50)
             ->get()
@@ -230,8 +224,8 @@ class PackageSearchController extends Controller
 
                 return [
                     'type' => 'bag',
-                    'label' => $bag->dispatch_number_bag ?: $bag->bag_number,
-                    'subtitle' => $bag->bag_number ?: 'Saca',
+                    'label' => $bag->bag_number,
+                    'subtitle' => 'Saca',
                     'meta' => ($manifest?->cn31_number ?: 'Sin CN31').' | '.((int) $bag->declared_package_count).' paquetes',
                     'status' => $bag->status,
                     'status_label' => PackageStatusCatalog::labelForStatus($bag->status),

@@ -16,7 +16,6 @@ class Cn31Bag extends Model
         'created_by_api_token_id',
         'cn31_manifest_id',
         'bag_number',
-        'dispatch_number_bag',
         'declared_package_count',
         'declared_weight_kg',
         'status',

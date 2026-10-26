@@ -348,9 +348,7 @@ class TrackingEventWriter
         $reference = trim((string) ($context['receptacle_reference'] ?? ''));
         $bag = Cn31Bag::query()
             ->where('company_id', $package->company_id)
-            ->where(fn ($query) => $query
-                ->where('bag_number', $reference)
-                ->orWhere('dispatch_number_bag', $reference))
+            ->where('bag_number', $reference)
             ->first();
 
         if (! $bag || ! Cn33Package::query()
